@@ -94,7 +94,7 @@ table(premium_data_filtered$REGION) # sample adult region
 
 
 
-# creating the system design object
+# creating the survey design object
 library(survey)
 
 svy_design <- svydesign(
