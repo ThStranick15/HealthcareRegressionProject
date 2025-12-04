@@ -1,4 +1,8 @@
 library(tidyverse)
+library(ggplot2)
+library(stringr)
+
+##################Data Cleaning######################
 
 #Read in Excel, convert to tibble for ease of use
 
@@ -30,6 +34,10 @@ premium_data <- premium_data %>% select(HICOSTR1_A, #response y
 
 #GESDIB_A
 #on SEX_A=2
+
+premium_data$dummy <- with(premium_data,ifelse(SEX_A == 1, 0, 1))
+
+premium_data$test <- premium_data$dummy * premium_data$GESDIB_A
 
 #premium_data$GESDIB_A <- with(premium_data, ifelse(SEX_A == 1, 0, premium_data$GESDIB_A))
 
@@ -105,10 +113,12 @@ premium_data <- premium_data %>% mutate(across(c(SEX_A, RACEALLP_A, HISPALLP_A, 
 
 nrow(premium_data)
 
-#Numerical & Graphical Summary of Data
+####################### Numerical & Graphical Summary of Data #########################
 
 str(premium_data)
 summary(premium_data)
+
+num_total <- nrow(survey_data)
 
 num_sample_adults <- nrow(premium_data) #number of SA with premium value
 
@@ -116,23 +126,42 @@ num_obs <- nobs(premium_model) #number of observations in model
 
 num_NAs <- num_sample_adults - num_obs #number of people who did not answer some of the questions
 
-library(ggplot2)
+sample_table <- data.frame(
+  total_adults = num_total,
+  premium_adults = num_sample_adults,
+  invalid_responses = num_NAs
+)
+
+sample_table
 
 #Demographics
 #Age Histogram
-ggplot(premium_data, aes(x=AGEP_A)) +
-  geom_histogram(binwidth=5, fill="skyblue", color="black") +
+ggplot(premium_data, aes(x = AGEP_A)) +
+  geom_histogram(
+    binwidth = 5,
+    fill = "lightblue",
+    color = "black",
+    size = 1,          # thicker bar borders
+    alpha = 0.7        # more solid bars
+  ) +
   theme_minimal() +
-  labs(title="Histogram of Age", x="Age", y="Count")
+  labs(
+    title = "Age Distribution",
+    x = "Age",
+    y = "Count"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"), # centered title
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12)
+  )
 
 #Gender Table
 gender_table <- table(premium_data$SEX_A)
 names(gender_table) <- c("Male", "Female")
 gender_table
 
-#Race
-
-library(stringr)
+#Race Histogram
 
 freq_table <- table(survey_data$HISPALLP_A)
 
@@ -162,13 +191,51 @@ ggplot(df, aes(x = reorder(Description, Frequency), y = Frequency)) +
   theme(plot.title = element_text(hjust = 0.5))
 
 #Socio-Economic
+#Poverty Ratio Density Plot
 
 ggplot(premium_data, aes(x = POVRATTC_A)) +
-  geom_density(fill = "lightgreen", alpha = 0.5) +
+  geom_density(
+    fill = "lightgreen",
+    alpha = 0.6,
+    color = "darkgreen",
+    size = 1.1          # thicker, more visible curve
+  ) +
   theme_minimal() +
-  labs(title = "Family Poverty Ratio", x = "Poverty Ratio", y = "Density")
+  labs(
+    title = "Family Poverty Ratio",
+    x = "Poverty Ratio",
+    y = "Density"
+  ) +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 16, face = "bold"),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12)
+  )
 
-#create linear model
+#Health Totals
+#DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
+
+dibev_yes <- sum(premium_data$DIBEV_A == 1, na.rm = TRUE)
+dibev_no  <- sum(premium_data$DIBEV_A == 2, na.rm = TRUE)
+
+predib_yes <- sum(premium_data$PREDIB_A == 1, na.rm = TRUE)
+predib_no  <- sum(premium_data$PREDIB_A == 2, na.rm = TRUE)
+
+hypev_yes <- sum(premium_data$HYPEV_A == 1, na.rm = TRUE)
+hypev_no  <- sum(premium_data$HYPEV_A == 2, na.rm = TRUE)
+
+asev_yes <- sum(premium_data$ASEV_A == 1, na.rm = TRUE)
+asev_no  <- sum(premium_data$ASEV_A == 2, na.rm = TRUE)
+
+health_conditions <- data.frame(
+  Condition = c("Diabetes", "Prediabetes", "Hypertension", "Asthma"),
+  Has = c(dibev_yes, predib_yes, hypev_yes, asev_yes),
+  Does_Not  = c(dibev_no,  predib_no,  hypev_no,  asev_no)
+)
+
+health_conditions
+
+########## Linear Regression ###############
 
 #creating the survey design object
 library(survey)
@@ -189,17 +256,72 @@ premium_model <- svyglm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_
                           SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
                           REGION + URBRRL23 + #geography
                           SEX_A + EVERCOVD_A + DRKLIFE_A,
-                        #SEX_A * GESDIB_A + LONGCOVD2_A * EVERCOVD_A + DRKLIFE_A * DRK12MWK_A, #interactions: EMDOCCUPN2_A,EMDOCCUPN1_A,EMDINDSTN1_A,MCPART_A,MCCHOICE_A,EXCHANGE_A,PLNWRKR1_A
-                        design = svy_design)
+                          #dummy * GESDIB_A, #+ LONGCOVD2_A * EVERCOVD_A + DRKLIFE_A * DRK12MWK_A, #interactions: EMDOCCUPN2_A,EMDOCCUPN1_A,EMDINDSTN1_A,MCPART_A,MCCHOICE_A,EXCHANGE_A,PLNWRKR1_A
+                          design = svy_design)
 
 
 summary(premium_model)
 
+#######Assumptions##########
+
+#Linearity Check - relationship between response and independant variables, scatter plot - consider transforms
+
+#Independance of errors, iid and constant
+
+#Variance of residuals, should be constant - plot residuals against predicted, should be randomly scattered no pattern
+
+#Collinearity - independant variablse should no be correlated - correlation matrix, compute variance inflation factor for each predictor
+#high IF values indicate high collinearity
+
+#observe outlier points in scatter plots, look at continuous covariates, possible replace/remove, influential points Cooks distance
+
+#mean of residuals should be 0
+
+#Normality of errors, residuals should be normally distributed -histogram for residuals (bell curve if normal)
+#Q-Q - Plot
+
+ggplot(resid_df, aes(sample = Residuals)) +
+  stat_qq(color = "blue") +
+  stat_qq_line(color = "red", linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "QQ Plot of Deviance Residuals",
+       x = "Theoretical Quantiles",
+       y = "Sample Quantiles")
+
+#Residuals vs Fitted
+
+resid_df <- data.frame(
+  Fitted = fitted(premium_model),
+  Residuals = residuals(premium_model, type = "deviance")
+)
+
+ggplot(resid_df, aes(x = Fitted, y = Residuals)) +
+  geom_point(alpha = 0.6) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  geom_smooth(method = "loess", color = "blue", se = FALSE) +
+  theme_minimal() +
+  labs(
+    title = "Residuals vs Fitted Values",
+    x = "Fitted Values",
+    y = "Residuals"
+  )
+
+#Leverage Points
+
+#Jackknife Residuals & Bonferonni Correction
+
+#Influential Points w/ Cooks Distance - Half Normal Plot
+
+#Condition Number
+
+
+############# Covariate Selection & Analysis ######################
 #Hypothesis Test
 
 #Confidence Interval
 
 #F-Test/Anova
+#remove each category from model
 #Do one of health conditions affect health insurance premium?
 
 premium_model_nohealth <- svyglm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
@@ -255,35 +377,9 @@ ggplot(rse_df, aes(x = NumCovariates, y = RSE)) +
   ) +
   scale_x_continuous(breaks = 1:length(covariates))
 
-#Hw6 Things
 
-#Residuals vs Fitted
 
-resid_df <- data.frame(
-  Fitted = fitted(premium_model),
-  Residuals = residuals(premium_model, type = "deviance")
-)
 
-ggplot(resid_df, aes(x = Fitted, y = Residuals)) +
-  geom_point(alpha = 0.6) +
-  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
-  geom_smooth(method = "loess", color = "blue", se = FALSE) +
-  theme_minimal() +
-  labs(
-    title = "Residuals vs Fitted Values",
-    x = "Fitted Values",
-    y = "Residuals"
-  )
-
-#Q-Q - Plot
-
-ggplot(resid_df, aes(sample = Residuals)) +
-  stat_qq(color = "blue") +
-  stat_qq_line(color = "red", linetype = "dashed") +
-  theme_minimal() +
-  labs(title = "QQ Plot of Deviance Residuals",
-       x = "Theoretical Quantiles",
-       y = "Sample Quantiles")
 
 #Partial Regression Plot for POVRATTC_A
 # 1. Residuals of Y after all other predictors
@@ -315,20 +411,15 @@ ggplot(partial_df, aes(x = Residual_X, y = Residual_Y)) +
   geom_point(alpha = 0.6) +
   geom_smooth(method = "lm", color = "blue", se = FALSE) +
   theme_minimal() +
-  labs(title = "Partial Regression Plot for AGEP_A",
+  labs(title = "Partial Regression Plot for POVRATTC_A",
        x = "Residuals of POVRATTC_A ~ other predictors",
        y = "Residuals of HICOSTR1_A ~ other predictors")
 
-#Leverage Points
-
-#Jackknife Residuals & Bonferonni Correction
-
-#Influential Points w/ Cooks Distance - Half Normal Plot
-
-#Condition Number
 
 #Forward Stepwise Selection
 
 #Backward Stepwise Selection
+
+#Hybrid/Both Selction
 
 
