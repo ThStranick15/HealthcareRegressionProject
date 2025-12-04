@@ -262,32 +262,23 @@ premium_model <- svyglm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_
 
 summary(premium_model)
 
-#######Assumptions##########
+####### Assumptions ##########
 
 #Linearity Check - relationship between response and independant variables, scatter plot - consider transforms
 
-#Independance of errors, iid and constant
+#Continuous AGEP_A Linearity Check
+ggplot(svy_design$variables, aes(x = AGEP_A, y = HICOSTR1_A)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess") +
+  theme_minimal()
+
+#Continuous POVRATTC_A Linearity Check
+ggplot(svy_design$variables, aes(x = POVRATTC_A, y = HICOSTR1_A)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess") +
+  theme_minimal()
 
 #Variance of residuals, should be constant - plot residuals against predicted, should be randomly scattered no pattern
-
-#Collinearity - independant variablse should no be correlated - correlation matrix, compute variance inflation factor for each predictor
-#high IF values indicate high collinearity
-
-#observe outlier points in scatter plots, look at continuous covariates, possible replace/remove, influential points Cooks distance
-
-#mean of residuals should be 0
-
-#Normality of errors, residuals should be normally distributed -histogram for residuals (bell curve if normal)
-#Q-Q - Plot
-
-ggplot(resid_df, aes(sample = Residuals)) +
-  stat_qq(color = "blue") +
-  stat_qq_line(color = "red", linetype = "dashed") +
-  theme_minimal() +
-  labs(title = "QQ Plot of Deviance Residuals",
-       x = "Theoretical Quantiles",
-       y = "Sample Quantiles")
-
 #Residuals vs Fitted
 
 resid_df <- data.frame(
@@ -305,6 +296,54 @@ ggplot(resid_df, aes(x = Fitted, y = Residuals)) +
     x = "Fitted Values",
     y = "Residuals"
   )
+
+#Histogram of Residuals
+ggplot(resid_df, aes(x = Residuals)) +
+  geom_histogram(bins = 30, fill = "blue", alpha = 0.6) +
+  theme_minimal() +
+  labs(title = "Histogram of Residuals")
+
+#Collinearity - independant variablse should no be correlated - correlation matrix, compute variance inflation factor for each predictor
+#high IF values indicate high collinearity
+
+alias(premium_model)$Complete #DRKSTAT is collinear?
+
+library(car)
+vif(lm(HICOSTR1_A ~ AGEP_A + POVRATTC_A,
+       data = svy_design$variables))
+
+# Correlation matrix for continuous predictors
+cor(svy_design$variables[, cont_vars], use = "complete.obs")
+
+#observe outlier points in scatter plots, look at continuous covariates, possible replace/remove, influential points Cooks distance
+
+# Fit lm for diagnostics
+lm_model <- lm(HICOSTR1_A ~ ., data = svy_design$variables %>% select(HICOSTR1_A, all_of(all_vars)))
+
+# Cook's distance
+cooks <- cooks.distance(lm_model)
+plot(cooks, type="h", main="Cook's Distance")
+abline(h = 4/(nrow(svy_design$variables)), col="red", lty=2)
+
+# Hat values
+hat_vals <- hatvalues(lm_model)
+plot(hat_vals, type="h")
+abline(h = 2*mean(hat_vals), col="red", lty=2)
+
+#mean of residuals should be 0
+
+mean(residuals(premium_model))
+
+#Normality of errors, residuals should be normally distributed -histogram for residuals (bell curve if normal)
+#Q-Q - Plot
+
+ggplot(resid_df, aes(sample = Residuals)) +
+  stat_qq(color = "blue") +
+  stat_qq_line(color = "red", linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "QQ Plot of Deviance Residuals",
+       x = "Theoretical Quantiles",
+       y = "Sample Quantiles")
 
 #Leverage Points
 
