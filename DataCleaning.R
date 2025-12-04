@@ -214,16 +214,110 @@ premium_model_nohealth <- svyglm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A +
 anova(premium_model_nohealth, premium_model)
 
 #Residual Standard Error/R^2 vs Num of Predictors
+covariates <- c(
+  "AGEP_A", "RACEALLP_A", "HISPALLP_A", "MARITAL_A", "NATUSBORN_A",
+  "ORIENT_A", "POVRATTC_A", "RATCAT_A", "EDUCP_A", "ACCSSINT_A",
+  "DIBEV_A", "PREDIB_A", "HYPEV_A", "ASEV_A", "ANXFREQ_A", "DEPFREQ_A",
+  "SMOKELSEV1_A", "SMKCIGST_A", "DRKSTAT_A", "MODFREQW_A",
+  "REGION", "URBRRL23", "SEX_A", "EVERCOVD_A", "DRKLIFE_A"
+)
+
+
+rse_values <- numeric(length(covariates))
+
+for(i in 1:length(covariates)) {
+  # Create formula with first i covariates
+  formula_i <- as.formula(
+    paste("HICOSTR1_A ~", paste(covariates[1:i], collapse = "+"))
+  )
+  
+  # Fit survey-weighted model
+  model_i <- svyglm(formula_i, design = svy_design)
+  
+  # Extract residual standard error from dispersion
+  rse_values[i] <- sqrt(summary(model_i)$dispersion)
+}
+
+# Combine into a data frame for plotting
+rse_df <- data.frame(
+  NumCovariates = 1:length(covariates),
+  RSE = rse_values
+)
+
+ggplot(rse_df, aes(x = NumCovariates, y = RSE)) +
+  geom_line(color = "blue") +
+  geom_point(color = "red") +
+  theme_minimal() +
+  labs(
+    title = "Residual Standard Error vs. Number of Covariates (Survey-Weighted)",
+    x = "Number of Covariates",
+    y = "Residual Standard Error"
+  ) +
+  scale_x_continuous(breaks = 1:length(covariates))
 
 #Hw6 Things
 
 #Residuals vs Fitted
 
+resid_df <- data.frame(
+  Fitted = fitted(premium_model),
+  Residuals = residuals(premium_model, type = "deviance")
+)
+
+ggplot(resid_df, aes(x = Fitted, y = Residuals)) +
+  geom_point(alpha = 0.6) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  geom_smooth(method = "loess", color = "blue", se = FALSE) +
+  theme_minimal() +
+  labs(
+    title = "Residuals vs Fitted Values",
+    x = "Fitted Values",
+    y = "Residuals"
+  )
+
 #Q-Q - Plot
 
-#Shapiro Test
+ggplot(resid_df, aes(sample = Residuals)) +
+  stat_qq(color = "blue") +
+  stat_qq_line(color = "red", linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "QQ Plot of Deviance Residuals",
+       x = "Theoretical Quantiles",
+       y = "Sample Quantiles")
 
-#Partial Regression Plot
+#Partial Regression Plot for POVRATTC_A
+# 1. Residuals of Y after all other predictors
+resid_y <- residuals(svyglm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
+                                               RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
+                                               DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
+                                               SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
+                                               REGION + URBRRL23 + #geography
+                                               SEX_A + EVERCOVD_A + DRKLIFE_A,
+                                             #SEX_A * GESDIB_A + LONGCOVD2_A * EVERCOVD_A + DRKLIFE_A * DRK12MWK_A, #interactions: EMDOCCUPN2_A,EMDOCCUPN1_A,EMDINDSTN1_A,MCPART_A,MCCHOICE_A,EXCHANGE_A,PLNWRKR1_A
+                                             design = svy_design))
+
+# 2. Residuals of X_j after all other predictors
+resid_x <- residuals(svyglm(POVRATTC_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
+                              RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
+                              DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
+                              SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
+                              REGION + URBRRL23 + #geography
+                              SEX_A + EVERCOVD_A + DRKLIFE_A,
+                            #SEX_A * GESDIB_A + LONGCOVD2_A * EVERCOVD_A + DRKLIFE_A * DRK12MWK_A, #interactions: EMDOCCUPN2_A,EMDOCCUPN1_A,EMDINDSTN1_A,MCPART_A,MCCHOICE_A,EXCHANGE_A,PLNWRKR1_A
+                            design = svy_design))
+
+partial_df <- data.frame(
+  Residual_Y = resid_y,
+  Residual_X = resid_x
+)
+
+ggplot(partial_df, aes(x = Residual_X, y = Residual_Y)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", color = "blue", se = FALSE) +
+  theme_minimal() +
+  labs(title = "Partial Regression Plot for AGEP_A",
+       x = "Residuals of POVRATTC_A ~ other predictors",
+       y = "Residuals of HICOSTR1_A ~ other predictors")
 
 #Leverage Points
 
