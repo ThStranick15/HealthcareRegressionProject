@@ -31,11 +31,17 @@ premium_data <- premium_data %>% select(HICOSTR1_A, #response y
 #GESDIB_A
 #on SEX_A=2
 
+#premium_data$GESDIB_A <- with(premium_data, ifelse(SEX_A == 1, 0, premium_data$GESDIB_A))
+
 #LONGCOVD2_A
 #on EVERCOVD_A=1
 
+#premium_data$LONGCOVD2_A <- with(premium_data, ifelse(EVERCOVD_A == 2, 0, premium_data$LONGCOVD2_A))
+
 #DRK12MWK_A
 #on DRKLIFE_A=1
+
+#premium_data$DRK12MWK_A <- with(premium_data, ifelse(DRKLIFE_A == 2, 0, premium_data$DRK12MWK_A))
 
 #hard interactions?
 
@@ -99,27 +105,113 @@ premium_data <- premium_data %>% mutate(across(c(SEX_A, RACEALLP_A, HISPALLP_A, 
 
 nrow(premium_data)
 
+#Numerical & Graphical Summary of Data
+
+str(premium_data)
+summary(premium_data)
+
+num_sample_adults <- nrow(premium_data) #number of SA with premium value
+
+num_obs <- nobs(premium_model) #number of observations in model
+
+num_NAs <- num_sample_adults - num_obs #number of people who did not answer some of the questions
+
+library(ggplot2)
+
+#Demographics
+#Age Histogram
+ggplot(premium_data, aes(x=AGEP_A)) +
+  geom_histogram(binwidth=5, fill="skyblue", color="black") +
+  theme_minimal() +
+  labs(title="Histogram of Age", x="Age", y="Count")
+
+#Gender Table
+gender_table <- table(premium_data$SEX_A)
+names(gender_table) <- c("Male", "Female")
+gender_table
+
+#Race
+
+library(stringr)
+
+freq_table <- table(survey_data$HISPALLP_A)
+
+df <- as.data.frame(freq_table)
+names(df) <- c("Code", "Frequency")
+
+labels <- c(
+  "1" = "Hispanic",
+  "2" = "Non-Hispanic White only",
+  "3" = "Non-Hispanic Black/African American only",
+  "4" = "Non-Hispanic Asian only",
+  "5" = "Non-Hispanic AIAN only",
+  "6" = "Non-Hispanic AIAN and any other group",
+  "7" = "Other single and multiple races")
+
+df$Description <- str_wrap(labels[as.character(df$Code)], width = 20)
+
+ggplot(df, aes(x = reorder(Description, Frequency), y = Frequency)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  geom_text(aes(label=Frequency), hjust=-0.1) +
+  scale_y_continuous(expand = expansion(mult = c(0, 0.2))) +
+  theme_minimal() +
+  labs(title = "Frequency of Race/Ethnicity Groups",
+       x = "Race/Ethnicity Group",
+       y = "Frequency") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+#Socio-Economic
+
+ggplot(premium_data, aes(x = POVRATTC_A)) +
+  geom_density(fill = "lightgreen", alpha = 0.5) +
+  theme_minimal() +
+  labs(title = "Family Poverty Ratio", x = "Poverty Ratio", y = "Density")
+
 #create linear model
 
-premium_model <- lm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
-                    POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + EMDINDSTN1_A + #socio-economic
-                    DIBEV_A + PREDIB_A + GESDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
-                    SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
-                    REGION + URBRRL23 + #geography
-                    MCPART_A + MCCHOICE_A + EXCHANGE_A + PLNWRKR1_A + #access to care
-                    PPSU + PSTRAT + WTFA_A, 
-                    #SEX_A * GESDIB_A + LONGCOVD2_A * EVERCOVD_A + DRKLIFE_A * DRK12MWK_A, #interactions: EMDOCCUPN2_A,EMDOCCUPN1_A,EMDINDSTN1_A,MCPART_A,MCCHOICE_A,EXCHANGE_A,PLNWRKR1_A
-                    data=premium_data)
+#creating the survey design object
+library(survey)
+
+svy_design <- svydesign(
+  id = ~PPSU,           
+  strata = ~PSTRAT,    
+  weights = ~WTFA_A,    
+  data = premium_data,    # Final filtered and cleaned data
+  nest = TRUE
+)
+
+#MCPART_A + MCCHOICE_A + EXCHANGE_A + PLNWRKR1_A,
+
+premium_model <- svyglm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
+                          POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
+                          DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
+                          SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
+                          REGION + URBRRL23 + #geography
+                          SEX_A + EVERCOVD_A + DRKLIFE_A,
+                        #SEX_A * GESDIB_A + LONGCOVD2_A * EVERCOVD_A + DRKLIFE_A * DRK12MWK_A, #interactions: EMDOCCUPN2_A,EMDOCCUPN1_A,EMDINDSTN1_A,MCPART_A,MCCHOICE_A,EXCHANGE_A,PLNWRKR1_A
+                        design = svy_design)
+
 
 summary(premium_model)
-
-#Numerical & Graphical Summary
 
 #Hypothesis Test
 
 #Confidence Interval
 
 #F-Test/Anova
+#Do one of health conditions affect health insurance premium?
+
+premium_model_nohealth <- svyglm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
+                                                    POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
+                                                    #DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
+                                                    SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
+                                                    REGION + URBRRL23 + #geography
+                                                    SEX_A + EVERCOVD_A + DRKLIFE_A,
+                                                    #SEX_A * GESDIB_A + LONGCOVD2_A * EVERCOVD_A + DRKLIFE_A * DRK12MWK_A, #interactions: EMDOCCUPN2_A,EMDOCCUPN1_A,EMDINDSTN1_A,MCPART_A,MCCHOICE_A,EXCHANGE_A,PLNWRKR1_A
+                                                    design = svy_design)
+
+anova(premium_model_nohealth, premium_model)
 
 #Residual Standard Error/R^2 vs Num of Predictors
 
