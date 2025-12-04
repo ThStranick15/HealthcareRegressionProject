@@ -18,16 +18,81 @@ premium_data <- survey_tibble %>%
 
 #selecting all covariates
 premium_data <- premium_data %>% select(AGEP_A, SEX_A, RACEALLP_A, HISPALLP_A, MARITAL_A, NATUSBORN_A, ORIENT_A, #demographic
-                                        POVRATTC_A, RATCAT_A, EDUCP_A, EMDOCCUPN2_A, EMDOCCUPN1_A, ACCSSHOM_A, EMDINDSTN1_A, #socio-economic
+                                        POVRATTC_A, RATCAT_A, EDUCP_A, EMDOCCUPN2_A, EMDOCCUPN1_A, ACCSSINT_A, EMDINDSTN1_A, #socio-economic
                                         DIBEV_A, PREDIB_A, GESDIB_A, HYPEV_A, ASEV_A, LONGCOVD2_A, EVERCOVD_A, ANXFREQ_A,DEPFREQ_A, #health conditions
                                         SMOKELSEV1_A, SMKCIGST_A, DRKLIFE_A, DRK12MWK_A, DRKSTAT_A, MODFREQW_A, #health related behaviors
                                         REGION, URBRRL23, #geography
                                         MCPART_A, MCCHOICE_A, EXCHANGE_A, PLNWRKR1_A, #access to care
                                         PPSU, PSTRAT, WTFA_A)#survey design
 
-# premium_data <- premium_data %>% drop_na()
-# 
-# premium_data <- premium_data %>% mutate(across(c(HISPALLP_A,SEX_A),as.factor))
+#interactions
+
+#EMDOCCUPN2_A,EMDOCCUPN1_A,EMDINDSTN1_A
+#on EMPLASTWK_A=1 or EMPNOWRK_A=1 or EMPWHYNOT_A=7 or EMPWHENWRK_A=1
+
+#GESDIB_A
+#on SEX_A=2
+
+#LONGCOVD2_A
+#on EVERCOVD_A=1
+
+#DRK12MWK_A
+#on DRKLIFE_A=1
+
+#MCPART_A
+#on MEDICARE_A in (1,2)
+
+#MCCHOICE_A
+#on MEDICARE_A in (1,2) and MCPART_A in (2,3,7,8,9)
+
+#EXCHANGE_A
+#on PRIVATE_A = 1
+
+#PLNWRKR1_A
+#on PRIVATE_A in (1,2)
+
+#making invalid values NA (refused, not ascertained, don't know)
+premium_data[premium_data$AGEP_A %in% c(97, 98, 99)] <- NA
+premium_data[premium_data$SEX_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$RACEALLP_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$HISPALLP_A %in% c(97,98,99)] <- NA
+premium_data[premium_data$MARITAL_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$NATUSBORN_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$ORIENT_A %in% c(7,8)] <- NA
+premium_data[premium_data$RATCAT_A %in% c(98)] <- NA
+premium_data[premium_data$EDUCP_A %in% c(97,98,99)] <- NA
+premium_data[premium_data$EMDOCCUPN2_A %in% c(97,98,99)] <- NA
+premium_data[premium_data$EMDOCCUPN2_A %in% c(97,98,99)] <- NA
+premium_data[premium_data$ACCSSINT_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$EMDINDSTN1_A %in% c(97,98,99)] <- NA
+premium_data[premium_data$NATUSBORN_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$DIBEV_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$PREDIB_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$GESDIB_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$ASEV_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$LONGCOVD2_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$EVERCOVD_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$ANXFREQ_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$DEPFREQ_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$SMOKELSEV1_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$SMKCIGST_A %in% c(9)] <- NA
+premium_data[premium_data$DRKLIFE_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$DRK12MWK_A %in% c(97,98,99)] <- NA
+premium_data[premium_data$DRKSTAT_A %in% c(10)] <- NA
+premium_data[premium_data$MODFREQW_A %in% c(97,98,99)] <- NA
+premium_data[premium_data$MCPART_A %in% c(7,8,9)] <- NA
+premium_data[premium_data$MCCHOICE_A %in% c(7)] <- NA
+premium_data[premium_data$EXCHANGE_A %in% c(8)] <- NA
+premium_data[premium_data$PLNWRKR1_A %in% c(97,98,99)] <- NA
+
+#non-categorical: AGEP_A,POVRATTC_A,PPSU, PSTRAT, WTFA_A
+
+premium_data <- premium_data %>% mutate(across(c(SEX_A, RACEALLP_A, HISPALLP_A, MARITAL_A, NATUSBORN_A, ORIENT_A,
+                                                 RATCAT_A, EDUCP_A, EMDOCCUPN2_A, EMDOCCUPN1_A, ACCSSINT_A, EMDINDSTN1_A,
+                                                 DIBEV_A, PREDIB_A, GESDIB_A, HYPEV_A, ASEV_A, LONGCOVD2_A, EVERCOVD_A, ANXFREQ_A,DEPFREQ_A,
+                                                 SMOKELSEV1_A, SMKCIGST_A, DRKLIFE_A, DRK12MWK_A, DRKSTAT_A, MODFREQW_A,
+                                                 REGION, URBRRL23,
+                                                 MCPART_A, MCCHOICE_A, EXCHANGE_A, PLNWRKR1_A),as.factor))
 
 nrow(premium_data)
 
