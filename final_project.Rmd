@@ -1,0 +1,454 @@
+---
+title: "Final Project"
+author: "Avi Kodali"
+date: "2025-11-14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(survey)
+```
+
+```{r}
+adult2024 <- read.csv("adult24.csv", stringsAsFactors=FALSE)
+```
+
+```{r}
+head(adult2024)
+```
+
+```{r}
+adult2024$HICOSTR1_A
+```
+
+
+```{r}
+invalid_values <- c(99999, 99998, 99997)
+premium_data <- adult2024[(!is.na(adult2024$HICOSTR1_A) & !adult2024$HICOSTR1_A %in% invalid_values), ]
+premium_data <- premium_data %>% filter(PRPLCOV1_A == 2 & POLHLD1_A == 1)
+premium_data <- premium_data %>% select(HICOSTR1_A, #response y
+                                        AGEP_A, SEX_A, RACEALLP_A, HISPALLP_A, MARITAL_A, NATUSBORN_A, ORIENT_A, #demographic
+                                        POVRATTC_A, RATCAT_A, EDUCP_A, EMDOCCUPN2_A, EMDOCCUPN1_A, ACCSSINT_A, EMDINDSTN1_A, #socioeconomic
+                                        DIBEV_A, PREDIB_A, GESDIB_A, HYPEV_A, ASEV_A, LONGCOVD2_A, EVERCOVD_A, ANXFREQ_A,DEPFREQ_A, #health conditions
+                                        SMOKELSEV1_A, SMKCIGST_A, DRKLIFE_A, DRK12MWK_A, DRKSTAT_A, MODFREQW_A, #health related behaviors
+                                        REGION, URBRRL23, #geography
+                                        MCPART_A, MCCHOICE_A, EXCHANGE_A, PLNWRKR1_A, #access to care
+                                        PPSU, PSTRAT, WTFA_A)#survey design
+```
+
+```{r}
+premium_data$AGEP_A[premium_data$AGEP_A %in% c(97, 98, 99)] <- NA
+premium_data$SEX_A[premium_data$SEX_A %in% c(7,8,9)] <- NA
+premium_data$RACEALLP_A[premium_data$RACEALLP_A %in% c(7,8,9)] <- NA
+premium_data$HISPALLP_A[premium_data$HISPALLP_A %in% c(97,98,99)] <- NA
+premium_data$MARITAL_A[premium_data$MARITAL_A %in% c(7,8,9)] <- NA
+premium_data$NATUSBORN_A[premium_data$NATUSBORN_A %in% c(7,8,9)] <- NA
+premium_data$ORIENT_A[premium_data$ORIENT_A %in% c(7,8)] <- NA
+premium_data$RATCAT_A[premium_data$RATCAT_A %in% c(98)] <- NA
+premium_data$EDUCP_A[premium_data$EDUCP_A %in% c(97,98,99)] <- NA
+premium_data$EMDOCCUPN2_A[premium_data$EMDOCCUPN2_A %in% c(97,98,99)] <- NA
+premium_data$EMDOCCUPN1_A[premium_data$EMDOCCUPN1_A %in% c(97,98,99)] <- NA
+premium_data$ACCSSINT_A[premium_data$ACCSSINT_A %in% c(7,8,9)] <- NA
+premium_data$EMDINDSTN1_A[premium_data$EMDINDSTN1_A %in% c(97,98,99)] <- NA
+premium_data$NATUSBORN_A[premium_data$NATUSBORN_A %in% c(7,8,9)] <- NA
+premium_data$DIBEV_A[premium_data$DIBEV_A %in% c(7,8,9)] <- NA
+premium_data$PREDIB_A [premium_data$PREDIB_A %in% c(7,8,9)] <- NA
+premium_data$GESDIB_A[premium_data$GESDIB_A %in% c(7,8,9)] <- NA
+premium_data$HYPEV_A[premium_data$HYPEV_A %in% c(7,8,9)] <- NA
+premium_data$ASEV_A[premium_data$ASEV_A %in% c(7,8,9)] <- NA
+premium_data$LONGCOVD2_A [premium_data$LONGCOVD2_A %in% c(7,8,9)] <- NA
+premium_data$EVERCOVD_A[premium_data$EVERCOVD_A %in% c(7,8,9)] <- NA
+premium_data$ANXFREQ_A[premium_data$ANXFREQ_A %in% c(7,8,9)] <- NA
+premium_data$DEPFREQ_A[premium_data$DEPFREQ_A %in% c(7,8,9)] <- NA
+premium_data$SMOKELSEV1_A[premium_data$SMOKELSEV1_A %in% c(7,8,9)] <- NA
+premium_data$SMKCIGST_A[premium_data$SMKCIGST_A %in% c(9)] <- NA
+premium_data$DRKLIFE_A[premium_data$DRKLIFE_A %in% c(7,8,9)] <- NA
+premium_data$DRK12MWK_A[premium_data$DRK12MWK_A %in% c(97,98,99)] <- NA
+premium_data$DRKSTAT_A[premium_data$DRKSTAT_A %in% c(10)] <- NA
+premium_data$MODFREQW_A[premium_data$MODFREQW_A %in% c(97,98,99)] <- NA
+premium_data$MCPART_A[premium_data$MCPART_A %in% c(7,8,9)] <- NA
+premium_data$MCCHOICE_A[premium_data$MCCHOICE_A %in% c(7)] <- NA
+premium_data$EXCHANGE_A[premium_data$EXCHANGE_A %in% c(8)] <- NA
+premium_data$PLNWRKR1_A[premium_data$PLNWRKR1_A %in% c(97,98,99)] <- NA
+summary(premium_data)
+```
+
+```{r}
+premium_data <- premium_data %>% mutate(across(c(SEX_A, RACEALLP_A, HISPALLP_A, MARITAL_A, NATUSBORN_A, ORIENT_A,
+                                                 RATCAT_A, EDUCP_A, EMDOCCUPN2_A, EMDOCCUPN1_A, ACCSSINT_A, EMDINDSTN1_A,
+                                                 DIBEV_A, PREDIB_A, GESDIB_A, HYPEV_A, ASEV_A, LONGCOVD2_A, EVERCOVD_A, ANXFREQ_A,DEPFREQ_A,
+                                                 SMOKELSEV1_A, SMKCIGST_A, DRKLIFE_A, DRK12MWK_A, DRKSTAT_A, MODFREQW_A,
+                                                 REGION, URBRRL23,
+                                                 MCPART_A, MCCHOICE_A, EXCHANGE_A, PLNWRKR1_A),as.factor))
+summary(premium_data)
+```
+
+```{r}
+premium_data <- premium_data %>% 
+  mutate(SEX_A = case_when(SEX_A == 1 ~ "M", 
+                           SEX_A == 2 ~ "F",
+                           .default = NA),
+         RACEALLP_A = case_when(RACEALLP_A == 1 ~ "White",
+                                RACEALLP_A == 2 ~ "African-American",
+                                RACEALLP_A == 3 ~ "Asian",
+                                RACEALLP_A == 4 ~ "AIAN",
+                                RACEALLP_A == 5 ~ "AIAN+Grp",
+                                RACEALLP_A == 6 ~ "Other S/M",
+                                .default = NA),
+         HISPALLP_A = case_when(HISPALLP_A == 1 ~ "Hispanic",
+                                HISPALLP_A == 2 ~ "NH-White",
+                                HISPALLP_A == 3 ~ "NH-African-American",
+                                HISPALLP_A == 4 ~ "NH-Asian",
+                                HISPALLP_A == 5 ~ "NH_AIAN",
+                                HISPALLP_A == 6 ~ "NH-AIAN+Grp",
+                                HISPALLP_A == 7 ~ "Other S/M",
+                                .default = NA),
+         MARITAL_A = case_when(MARITAL_A == 1 ~ "Married",
+                               MARITAL_A == 2 ~ "Living Together",
+                               MARITAL_A == 3 ~ "Neither",
+                               .default = NA),
+         NATUSBORN_A = case_when(NATUSBORN_A == 1 ~ "Yes",
+                                 NATUSBORN_A == 2 ~ "No",
+                                 .default = NA),
+         ORIENT_A = case_when(ORIENT_A == 1 ~ "GayLesbian",
+                              ORIENT_A == 2 ~ "Straight",
+                              ORIENT_A == 3 ~ "Bisexual",
+                              ORIENT_A == 4 ~ "Something else",
+                              ORIENT_A == 5 ~ "Don't Know",
+                              .default = NA),
+         EDUCP_A = case_when(EDUCP_A == 0 ~ "Never/KG",
+                             EDUCP_A == 1 ~ "Gr1-11",
+                             EDUCP_A == 2 ~ "Gr12,No Diploma",
+                             EDUCP_A == 3 ~ "GED",
+                             EDUCP_A == 4 ~ "HS Grad",
+                             EDUCP_A == 5 ~ "Some College",
+                             EDUCP_A == 6 ~ "Assoc Dg: OCC, TECH, VOC",
+                             EDUCP_A == 7 ~ "Assoc Dg: Acad",
+                             EDUCP_A == 8 ~ "Bachelors",
+                             EDUCP_A == 9 ~ "Masters",
+                             EDUCP_A == 10 ~ "Profess/Doc",
+                             .default = NA),
+         ACCSSINT_A = case_when(ACCSSINT_A == 1 ~ "Yes",
+                                ACCSSINT_A == 2 ~ "No",
+                                .default = NA),
+         DIBEV_A = case_when(DIBEV_A == 1 ~ "Yes",
+                             DIBEV_A == 2 ~ "No",
+                             .default = NA),
+         PREDIB_A = case_when(PREDIB_A == 1 ~ "Yes",
+                              PREDIB_A == 2 ~ "No",
+                              .default = NA),
+         GESDIB_A = case_when(GESDIB_A == 1 ~ "Yes",
+                              GESDIB_A == 2 ~ "No",
+                              .default = NA),
+         HYPEV_A = case_when(HYPEV_A == 1 ~ "Yes",
+                             HYPEV_A == 2 ~ "No",
+                             .default = NA),
+         ASEV_A = case_when(ASEV_A == 1 ~ "Yes",
+                            ASEV_A == 2 ~ "No",
+                            .default = NA),
+         LONGCOVD2_A = case_when(LONGCOVD2_A == 1 ~ "Yes",
+                                 LONGCOVD2_A == 2 ~ "No",
+                                 .default = NA),
+         EVERCOVD_A = case_when(EVERCOVD_A == 1 ~ "Yes",
+                                EVERCOVD_A == 2 ~ "No",
+                                .default = NA),
+         ANXFREQ_A = case_when(ANXFREQ_A == 1 ~ "Daily",
+                               ANXFREQ_A == 2 ~ "Weekly",
+                               ANXFREQ_A == 3 ~ "Monthly",
+                               ANXFREQ_A == 4 ~ "Few times/year",
+                               ANXFREQ_A == 5 ~ "Never",
+                               .default = NA),
+         DEPFREQ_A = case_when(DEPFREQ_A == 1 ~ "Daily",
+                               DEPFREQ_A == 2 ~ "Weekly",
+                               DEPFREQ_A == 3 ~ "Monthly",
+                               DEPFREQ_A == 4 ~ "Few times/year",
+                               DEPFREQ_A == 5 ~ "Never",
+                               .default = NA),
+         SMOKELSEV1_A = case_when(SMOKELSEV1_A == 1 ~ "Yes",
+                                  SMOKELSEV1_A == 2 ~ "No",
+                                  .default = NA),
+         SMKCIGST_A = case_when(SMKCIGST_A == 1 ~ "Current everyday",
+                                SMKCIGST_A == 2 ~ "Current some day",
+                                SMKCIGST_A == 3 ~ "Former",
+                                SMKCIGST_A == 4 ~ "Never",
+                                SMKCIGST_A == 5 ~ "Smoker, status unknown",
+                                .default = NA),
+         DRKLIFE_A = case_when(DRKLIFE_A == 1 ~ "Yes",
+                               DRKLIFE_A == 2 ~ "No",
+                               .default = NA),
+         DRK12MWK_A = case_when(DRK12MWK_A == 0 ~ "< 1 day/week",
+                                DRK12MWK_A == 1 ~ "1 day/week",
+                                DRK12MWK_A == 2 ~ "2 day/week",
+                                DRK12MWK_A == 3 ~ "3 day/week",
+                                DRK12MWK_A == 4 ~ "4 day/week",
+                                DRK12MWK_A == 5 ~ "5 day/week",
+                                DRK12MWK_A == 6 ~ "6 day/week",
+                                DRK12MWK_A == 7 ~ "7 day/week",
+                                DRK12MWK_A == 95 ~ "Did not drink in past year",
+                                .default = NA),
+         DRKSTAT_A = case_when(DRKSTAT_A == 1 ~ "Lifetime abstainer",
+                               DRKSTAT_A == 2 ~ "Former infrequent",
+                               DRKSTAT_A == 3 ~ "Former inregular",
+                               DRKSTAT_A == 4 ~ "Former, freq unknown",
+                               DRKSTAT_A == 5 ~ "Current infrequent",
+                               DRKSTAT_A == 6 ~ "Current light",
+                               DRKSTAT_A == 7 ~ "Current moderate",
+                               DRKSTAT_A == 8 ~ "Current heavier",
+                               DRKSTAT_A == 9 ~ "Current, freq unknown",
+                               .default = NA),
+         MODFREQW_A = case_when(MODFREQW_A == 0 ~ "< 1 time/week",
+                                MODFREQW_A == 1 ~ "1 time/week",
+                                MODFREQW_A == 2 ~ "2 time/week",
+                                MODFREQW_A == 3 ~ "3 time/week",
+                                MODFREQW_A == 4 ~ "4 time/week",
+                                MODFREQW_A == 5 ~ "5 time/week",
+                                MODFREQW_A == 6 ~ "6 time/week",
+                                MODFREQW_A == 7 ~ "7 time/week",
+                                MODFREQW_A == 8 ~ "8 time/week",
+                                MODFREQW_A == 9 ~ "9 time/week",
+                                MODFREQW_A == 10 ~ "10 time/week",
+                                MODFREQW_A == 11 ~ "11 time/week",
+                                MODFREQW_A == 12 ~ "12 time/week",
+                                MODFREQW_A == 13 ~ "13 time/week",
+                                MODFREQW_A == 14 ~ "14 time/week",
+                                MODFREQW_A == 15 ~ "15 time/week",
+                                MODFREQW_A == 16 ~ "16 time/week",
+                                MODFREQW_A == 17 ~ "17 time/week",
+                                MODFREQW_A == 18 ~ "18 time/week",
+                                MODFREQW_A == 19 ~ "19 time/week",
+                                MODFREQW_A == 20 ~ "20 time/week",
+                                MODFREQW_A == 21 ~ "21 time/week",
+                                MODFREQW_A == 22 ~ "22 time/week",
+                                MODFREQW_A == 23 ~ "23 time/week",
+                                MODFREQW_A == 24 ~ "24 time/week",
+                                MODFREQW_A == 25 ~ "25 time/week",
+                                MODFREQW_A == 26 ~ "26 time/week",
+                                MODFREQW_A == 27 ~ "27 time/week",
+                                MODFREQW_A == 28 ~ "28 time/week",
+                                MODFREQW_A == 94 ~ "Never",
+                                MODFREQW_A == 96 ~ "Unable",
+                                .default = NA),
+         REGION = case_when(REGION == 1 ~ "Northeast",
+                            REGION == 2 ~ "Midwest",
+                            REGION == 3 ~ "South",
+                            REGION == 4 ~ "West",
+                            .default = NA),
+         URBRRL23 = case_when(URBRRL23 == 1 ~ "Large central metro",
+                              URBRRL23 == 2 ~ "Large fringe metro",
+                              URBRRL23 == 3 ~ "Medium and small metro",
+                              URBRRL23 == 4 ~ "Nonmetropolitan",
+                              .default = NA),
+         MCPART_A = case_when(MCPART_A == 1 ~ "Part A - hospital only",
+                              MCPART_A == 2 ~ "Part B - medical only",
+                              MCPART_A == 3 ~ "Part A & B",
+                              .default = NA),
+         MCCHOICE_A = case_when(MCCHOICE_A == 1 ~ "Yes",
+                                MCCHOICE_A == 2 ~ "No",
+                                .default = NA),
+         EXCHANGE_A = case_when(EXCHANGE_A == 1 ~ "Exchange plan",
+                                EXCHANGE_A == 2 ~ "No exchange plan"),
+         PLNWRKR1_A = case_when(PLNWRKR1_A == 1 ~ "Employer/union/professional organization",
+                                PLNWRKR1_A == 2 ~ "Directly",
+                                PLNWRKR1_A == 3 ~ "Obamacare",
+                                PLNWRKR1_A == 4 ~ "State/Local/Community program",
+                                PLNWRKR1_A == 5 ~ "Other",
+                                PLNWRKR1_A == 6 ~ "School",
+                                PLNWRKR1_A == 7 ~ "Parents",
+                                PLNWRKR1_A == 8 ~ "Relative",
+                                .default = NA))
+head(premium_data)
+```
+
+```{r}
+premium_data %>% 
+  ggplot(aes(x = HICOSTR1_A)) +
+  geom_histogram(bins = 50, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Premiums")
+
+premium_data %>% 
+  ggplot(aes(x = log(HICOSTR1_A))) +
+  geom_histogram(bins = 50, fill = "skyblue", color = "black")
+```
+
+```{r}
+premium_data %>%
+  filter(!is.na(SMKCIGST_A)) %>%
+  ggplot(aes(x = SMKCIGST_A, y = HICOSTR1_A, fill = SMKCIGST_A)) +
+  geom_violin(trim = FALSE, alpha = 0.5) +
+  geom_boxplot(width = 0.2, fill = "white", outlier.shape = NA) +
+  scale_y_continuous(limits = c(0, 20000)) + 
+  theme(legend.position = "none") +
+  labs(title = "Impact of Smoking Status on Premiums",
+       x = "Smoking Status",
+       y = "Premium Cost ($)")
+```
+
+```{r}
+premium_data %>%
+  filter(!is.na(PLNWRKR1_A)) %>%
+  mutate(PLNWRKR1_A = fct_reorder(PLNWRKR1_A, HICOSTR1_A, .fun = median)) %>%
+  ggplot(aes(x = PLNWRKR1_A, y = HICOSTR1_A, fill = PLNWRKR1_A)) +
+  geom_boxplot(outlier.alpha = 0.3) +
+  coord_flip() +
+  theme(legend.position = "none") +
+  labs(title = "Healthcare Premiums by Plan Source",
+       x = NULL,
+       y = "Premium Cost ($)")
+```
+
+```{r}
+edu_levels <- c("Never/KG", "Gr1-11", "Gr12,No Diploma", "GED", "HS Grad", 
+                "Some College", "Assoc Dg: OCC, TECH, VOC", "Assoc Dg: Acad", 
+                "Bachelors", "Masters", "Profess/Doc")
+
+premium_data %>%
+  filter(!is.na(EDUCP_A)) %>%
+  mutate(EDUCP_A = factor(EDUCP_A, levels = edu_levels)) %>%
+  ggplot(aes(x = EDUCP_A, y = HICOSTR1_A)) +
+  geom_boxplot(fill = "blue", alpha = 0.6) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Socioeconomic Gradient: Education vs. Premium",
+       x = "Education Level",
+       y = "Premium Cost ($)")
+```
+
+```{r}
+premium_data %>% 
+  ggplot(aes(x = AGEP_A, y = HICOSTR1_A)) +
+  geom_point() +
+  geom_smooth(method = "gam", color = "red", se = TRUE) + 
+  labs(title = "Relationship Between Age and Premium Cost",
+       subtitle = "Red line indicates the smoothed trend",
+       x = "Age (Years)",
+       y = "Premium Cost ($)")
+```
+
+```{r}
+premium_data %>%
+  filter(!is.na(REGION) & !is.na(URBRRL23)) %>%
+  group_by(REGION, URBRRL23) %>%
+  summarise(
+    Avg_Cost = mean(HICOSTR1_A, na.rm = TRUE),
+    SE = sd(HICOSTR1_A, na.rm = TRUE) / sqrt(n())
+  ) %>%
+  ggplot(aes(x = REGION, y = Avg_Cost, fill = URBRRL23)) +
+  geom_bar(stat = "identity", position = position_dodge(0.9), alpha = 0.8) +
+  geom_errorbar(aes(ymin = Avg_Cost - 1.96*SE, ymax = Avg_Cost + 1.96*SE),
+                position = position_dodge(0.9), width = 0.25) +
+  labs(title = "Average Premium by Region and Urbanicity",
+       y = "Mean Premium Cost ($)",
+       fill = "Urban Status")
+```
+
+```{r}
+premium_data %>%
+  mutate(
+    Comorbidity_Score = (HYPEV_A == "Yes") + (ASEV_A == "Yes") + 
+                        (DIBEV_A == "Yes") + (EVERCOVD_A == "Yes")
+  ) %>%
+  filter(!is.na(Comorbidity_Score)) %>%
+  ggplot(aes(x = factor(Comorbidity_Score), y = HICOSTR1_A)) +
+  geom_boxplot(fill = "salmon", alpha = 0.6) +
+  labs(title = "Impact of Comorbidity Burden on Premiums",
+       subtitle = "Sum of Hypertension, Asthma, Diabetes, and Ever-COVID",
+       x = "Number of Chronic Conditions",
+       y = "Premium Cost ($)")
+```
+
+```{r}
+anx_levels <- c("Daily", "Weekly", "Monthly", "Few times/year", "Never")
+
+premium_data %>%
+  filter(!is.na(ANXFREQ_A)) %>%
+  mutate(ANXFREQ_A = factor(ANXFREQ_A, levels = anx_levels)) %>%
+  ggplot(aes(x = ANXFREQ_A, y = HICOSTR1_A, fill = ANXFREQ_A)) +
+  geom_boxplot(outlier.shape = NA) +
+  scale_y_continuous(limits = c(0, 20000)) +
+  scale_fill_brewer(palette = "PuBuGn", direction = -1) +
+  theme(legend.position = "none") +
+  labs(title = "Anxiety Frequency vs. Healthcare Premiums",
+       x = "How Often Do You Feel Anxious?",
+       y = "Premium Cost ($)")
+```
+
+```{r}
+premium_data %>%
+  filter(!is.na(SEX_A)) %>%
+  ggplot(aes(x = HICOSTR1_A, fill = SEX_A)) +
+  geom_density(alpha = 0.5) +
+  scale_x_continuous(limits = c(0, 25000)) +
+  theme_minimal() +
+  labs(title = "Density of Premium Costs by Sex",
+       x = "Premium Cost ($)",
+       y = "Density",
+       fill = "Sex")
+```
+
+```{r}
+premium_data %>%
+  filter(!is.na(RACEALLP_A)) %>%
+  mutate(RACEALLP_A = fct_reorder(RACEALLP_A, HICOSTR1_A, .fun = median)) %>%
+  ggplot(aes(x = RACEALLP_A, y = HICOSTR1_A, fill = RACEALLP_A)) +
+  geom_boxplot(alpha = 0.7, outlier.alpha = 0.3) +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Premium Costs by Racial Group",
+       subtitle = "Ordered by median premium cost",
+       x = "Race/Ethnicity",
+       y = "Premium Cost ($)")
+```
+
+```{r}
+premium_data %>%
+  filter(!is.na(MARITAL_A)) %>%
+  ggplot(aes(x = MARITAL_A, y = HICOSTR1_A, fill = MARITAL_A)) +
+  geom_violin(trim = FALSE, alpha = 0.4) +
+  geom_boxplot(width = 0.2, fill = "white", outlier.shape = NA) +
+  theme(legend.position = "none") +
+  labs(title = "Marital Status and Premium Costs",
+       subtitle = "Married individuals may be carrying family plans (higher cost)",
+       x = "Marital Status",
+       y = "Premium Cost ($)")
+```
+
+```{r}
+premium_data %>%
+  filter(!is.na(LONGCOVD2_A)) %>%
+  ggplot(aes(x = LONGCOVD2_A, y = HICOSTR1_A, fill = LONGCOVD2_A)) +
+  geom_boxplot(width = 0.5) +
+  scale_fill_manual(values = c("Yes" = "#E69F00", "No" = "#56B4E9")) +
+  theme(legend.position = "none") +
+  labs(title = "Do Individuals with Long COVID Pay More?",
+       x = "Has Long COVID?",
+       y = "Premium Cost ($)")
+```
+
+```{r}
+premium_data %>%
+  filter(!is.na(DRKSTAT_A)) %>%
+  mutate(DRKSTAT_A = fct_reorder(DRKSTAT_A, HICOSTR1_A, .fun = median)) %>%
+  ggplot(aes(x = DRKSTAT_A, y = HICOSTR1_A, fill = DRKSTAT_A)) +
+  geom_boxplot(outlier.alpha = 0.2) +
+  coord_flip() + 
+  theme(legend.position = "none") +
+  labs(title = "Alcohol Consumption Status vs. Premiums",
+       x = NULL,
+       y = "Premium Cost ($)")
+```
+
+```{r}
+svy_design <- svydesign(
+  id = ~PPSU,           
+  strata = ~PSTRAT,    
+  weights = ~WTFA_A,    
+  data = premium_data,
+  nest = TRUE
+)
+```
+
+
+
+
