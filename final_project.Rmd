@@ -12,8 +12,7 @@ library(survey)
 ```
 
 ```{r}
-adult2024 <- read.csv("Data/adult24.csv", stringsAsFactors=FALSE)
-ncol(adult2024)
+adult2024 <- read.csv("adult24.csv", stringsAsFactors=FALSE)
 ```
 
 ```{r}
@@ -327,9 +326,6 @@ premium_data <- premium_data %>%
 
 head(premium_data)
 ```
-```{r}
-nrow(premium_data)
-```
 
 ```{r}
 sort(colSums(is.na(premium_data)), decreasing = TRUE)
@@ -342,7 +338,7 @@ premium_data <- premium_data %>% select(HICOSTR1_A, #response y
                                         DIBEV_A, PREDIB_A, GESDIB_A, HYPEV_A, ASEV_A, LONGCOVD2_A, EVERCOVD_A, ANXFREQ_A,DEPFREQ_A, #health conditions
                                         SMOKELSEV1_A, SMKCIGST_A, DRKLIFE_A, DRK12MWK_A, DRKSTAT_A, MODFREQW_A, #health related behaviors
                                         REGION, URBRRL23, #geography
-                                        #MCPART_A, MCCHOICE_A, EXCHANGE_A, PLNWRKR1_A, #access to care
+                                        MCPART_A, MCCHOICE_A, EXCHANGE_A, PLNWRKR1_A, #access to care
                                         PPSU, PSTRAT, WTFA_A)#survey design
 sort(colSums(is.na(premium_data)), decreasing = TRUE)
 ```
@@ -353,27 +349,9 @@ premium_data %>%
   geom_histogram(bins = 50, fill = "skyblue", color = "black") +
   labs(title = "Distribution of Premiums")
 
-nrow(premium_data)
-
-p <- ggplot(premium_data, aes(x = HICOSTR1_A)) +
+premium_data %>% 
+  ggplot(aes(x = log(HICOSTR1_A))) +
   geom_histogram(bins = 50, fill = "skyblue", color = "black")
-
-# Extract histogram data
-hist_data <- ggplot_build(p)$data[[1]]
-
-# Find tallest bin
-top_bin <- hist_data %>%
-  slice_max(ncount, n = 1)   # or 'count' if you prefer raw counts
-
-# Add label to the tallest bin
-p + 
-  annotate("text",
-           x = top_bin$x,          # bin center
-           y = top_bin$count,      # height of bar
-           label = paste0("Peak: ", round(top_bin$x, 2)),
-           vjust = -0.5,
-           color = "black",
-           fontface = "bold")
 ```
 
 ```{r}
@@ -554,12 +532,11 @@ svy_design <- svydesign(
 ```
 
 ```{r}
-premium_model <- svyglm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
-                          POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
-                          DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
-                          SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
-                          REGION + URBRRL23 + #geography
-                          SEX_A + EVERCOVD_A + DRKLIFE_A,
+premium_model <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A + HYPEV_A +  ASEV_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23,
                           design = svy_design)
 summary(premium_model)
 ```
@@ -600,40 +577,46 @@ ggplot(resid_df, aes(x = Residuals)) +
 ```
 
 ```{r}
-summary(premium_data)
+alias(premium_model)$Complete #DRKSTAT is collinear?
 ```
 
-
 ```{r}
-alias(premium_model)$Complete #DRKSTAT is collinear?
-
 library(car)
 vif(lm(HICOSTR1_A ~ AGEP_A + POVRATTC_A,
        data = svy_design$variables))
+```
 
+```{r}
 # Correlation matrix for continuous predictors
 cont_vars <- c("AGEP_A", "POVRATTC_A", "HICOSTR1_A")
 cor(svy_design$variables[, cont_vars], use = "complete.obs")
+```
 
-#observe outlier points in scatter plots, look at continuous covariates, possible replace/remove, influential points Cooks distance
-
+```{r}
 # Fit lm for diagnostics
+all_vars <- names(premium_data)[!names(premium_data) %in% c("HICOSTR1_A", "PPSU", "PSTRAT", "WTFA_A")]
 lm_model <- lm(HICOSTR1_A ~ ., data = svy_design$variables %>% select(HICOSTR1_A, all_of(all_vars)))
 
 # Cook's distance
 cooks <- cooks.distance(lm_model)
 plot(cooks, type="h", main="Cook's Distance")
 abline(h = 4/(nrow(svy_design$variables)), col="red", lty=2)
+```
 
+```{r}
 # Hat values
 hat_vals <- hatvalues(lm_model)
 plot(hat_vals, type="h")
 abline(h = 2*mean(hat_vals), col="red", lty=2)
+```
 
+```{r}
 #mean of residuals should be 0
 
 mean(residuals(premium_model))
+```
 
+```{r}
 #Normality of errors, residuals should be normally distributed -histogram for residuals (bell curve if normal)
 #Q-Q - Plot
 
@@ -644,6 +627,9 @@ ggplot(resid_df, aes(sample = Residuals)) +
   labs(title = "QQ Plot of Deviance Residuals",
        x = "Theoretical Quantiles",
        y = "Sample Quantiles")
+```
+
+```{r}
 
 #Leverage Points
 
@@ -668,12 +654,14 @@ premium_model_nohealth <- svyglm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A +
                                                     #DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
                                                     SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
                                                     REGION + URBRRL23 + #geography
-                                                    SEX_A + EVERCOVD_A + DRKLIFE_A,
+                                                    SEX_A + EVERCOVD_A,
                                                     #SEX_A * GESDIB_A + LONGCOVD2_A * EVERCOVD_A + DRKLIFE_A * DRK12MWK_A, #interactions: EMDOCCUPN2_A,EMDOCCUPN1_A,EMDINDSTN1_A,MCPART_A,MCCHOICE_A,EXCHANGE_A,PLNWRKR1_A
                                                     design = svy_design)
 
 anova(premium_model_nohealth, premium_model)
+```
 
+```{r}
 #Residual Standard Error/R^2 vs Num of Predictors
 covariates <- c(
   "AGEP_A", "RACEALLP_A", "HISPALLP_A", "MARITAL_A", "NATUSBORN_A",
@@ -715,11 +703,9 @@ ggplot(rse_df, aes(x = NumCovariates, y = RSE)) +
     y = "Residual Standard Error"
   ) +
   scale_x_continuous(breaks = 1:length(covariates))
+```
 
-
-
-
-
+```{r}
 #Partial Regression Plot for POVRATTC_A
 # 1. Residuals of Y after all other predictors
 resid_y <- residuals(svyglm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
@@ -756,5 +742,277 @@ ggplot(partial_df, aes(x = Residual_X, y = Residual_Y)) +
 
 ```
 
+```{r}
+premium_log_model <- svyglm(log(HICOSTR1_A) ~ AGEP_A + SEX_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A + HYPEV_A +  ASEV_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23,
+                          design = svy_design)
 
+residuals_comparison <- bind_rows(
+  data.frame(
+    Residuals = residuals(premium_model, type = "deviance"),
+    Model_Type = "Base Linear Model"
+  ),
+  data.frame(
+    Residuals = residuals(premium_log_model, type = "deviance"),
+    Model_Type = "Log-Transformed Model"
+  )
+)
+
+ggplot(residuals_comparison, aes(sample = Residuals)) +
+  stat_qq(aes(color = Model_Type), alpha = 0.6) +
+  stat_qq_line(color = "black", linetype = "dashed") +
+  facet_wrap(~Model_Type, scales = "free") +
+  theme_minimal() +
+  scale_color_manual(values = c("Base Linear Model" = "red", "Log-Transformed Model" = "blue")) +
+  labs(
+    title = "Diagnostic Check: Normality of Residuals",
+    x = "Theoretical Quantiles",
+    y = "Sample Quantiles"
+  ) +
+  theme(legend.position = "none")
+```
+
+```{r}
+sum(premium_data$HICOSTR1_A == 0, na.rm = TRUE)
+
+min(premium_data$HICOSTR1_A[premium_data$HICOSTR1_A > 0], na.rm = TRUE)
+max(premium_data$HICOSTR1_A[premium_data$HICOSTR1_A > 0], na.rm = TRUE)
+```
+
+```{r}
+premium_gamma_model <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A + HYPEV_A +  ASEV_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23,
+                          design = svy_design, 
+                          family = Gamma(link = "log"))
+
+summary(premium_gamma_model)
+```
+
+```{r}
+gamma_diag <- data.frame(
+  Fitted = fitted(premium_gamma_model),
+  Residuals = residuals(premium_gamma_model, type = "deviance")
+)
+
+ggplot(gamma_diag, aes(x = log(Fitted), y = Residuals)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "loess", color = "red") +
+  labs(title = "Gamma Model: Deviance Residuals vs Fitted",
+       subtitle = "Ideally, the red line is flat and residuals are centered around 0",
+       x = "Log(Fitted Values)",
+       y = "Deviance Residuals")
+```
+
+```{r}
+proxy_vif_model <- glm(HICOSTR1_A ~ AGEP_A + SEX_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A + HYPEV_A +  ASEV_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23,
+    data = premium_data, 
+    weights = WTFA_A, 
+    family = Gamma(link = "log"))
+
+alias(proxy_vif_model)
+```
+
+```{r}
+proxy_vif_model <- glm(HICOSTR1_A ~ AGEP_A + SEX_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A + HYPEV_A +  ASEV_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23,
+    data = premium_data, 
+    weights = WTFA_A, 
+    family = Gamma(link = "log"))
+
+alias(proxy_vif_model)
+vif(proxy_vif_model)
+```
+
+```{r}
+proxy_vif_model <- glm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A + HYPEV_A +  ASEV_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23,
+    data = premium_data, 
+    weights = WTFA_A, 
+    family = Gamma(link = "log"))
+
+alias(proxy_vif_model)
+vif(proxy_vif_model)
+```
+```{r}
+final_gamma_model <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A + HYPEV_A +  ASEV_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23,
+                          design = svy_design, 
+                          family = Gamma(link = "log"))
+summary(final_gamma_model)
+```
+
+```{r}
+cooks_d <- cooks.distance(final_gamma_model)
+
+n_obs <- nobs(final_gamma_model)
+cutoff <- 4 / n_obs
+
+plot(cooks_d, pch = 20, main = "Cook's Distance Plot", ylab = "Cook's Distance")
+abline(h = cutoff, col = "red", lty = 2)
+
+influential_indices <- which(cooks_d > cutoff) 
+
+
+top_influential_data <- premium_data[names(sort(cooks_d[influential_indices], decreasing = TRUE)[1:10]), ] %>%
+   dplyr::select(HICOSTR1_A, AGEP_A, POVRATTC_A, WTFA_A)
+
+print(paste("Number of points above threshold:", length(influential_indices)))
+print("Top 10 Most Influential Points:")
+print(top_influential_data)
+```
+
+
+```{r}
+ggplot(data.frame(Fitted = fitted(final_gamma_model), 
+                  Resid = residuals(final_gamma_model, type = "deviance")),
+       aes(x = log(Fitted), y = Resid)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "loess", color = "red", se = FALSE) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Residuals vs. Fitted Values",
+       subtitle = "Red line should be flat. Funnel shape means Gamma assumption failed.",
+       x = "Log Predicted Premium",
+       y = "Deviance Residuals")
+```
+
+```{r}
+backward_select_svy <- function(full_model, design, alpha = 0.05) {
+  current_model <- full_model
+  
+  print(paste("Starting Backward Selection with", length(coef(current_model)), "coefficients..."))
+  
+  while(TRUE) {
+    summ <- summary(current_model)
+    coefs <- summ$coefficients
+    
+    if(nrow(coefs) <= 1) {
+      print("No predictors left.")
+      break
+    }
+    
+
+    p_values <- coefs[rownames(coefs) != "(Intercept)", "Pr(>|t|)", drop = FALSE]
+    max_p <- max(p_values)
+    worst_coef_name <- rownames(p_values)[which.max(p_values)]
+    
+    if(max_p > alpha) {
+      
+
+      model_terms <- attr(terms(current_model), "term.labels")
+      
+
+      matched_term <- NULL
+      for(term in model_terms) {
+        if(substr(worst_coef_name, 1, nchar(term)) == term) {
+          if(is.null(matched_term) || nchar(term) > nchar(matched_term)) {
+            matched_term <- term
+          }
+        }
+      }
+      
+      if(is.null(matched_term)) {
+        print(paste("ERROR: Could not map coefficient", worst_coef_name, "to a term. Stopping."))
+        break
+      }
+      
+      print(paste("Dropping term:", matched_term, 
+                  "| Triggered by coefficient:", worst_coef_name, 
+                  "| p-value:", round(max_p, 4)))
+      
+      new_formula <- update(formula(current_model), paste("~ . -", matched_term))
+      
+      if(identical(new_formula, formula(current_model))) {
+        print("Error: Formula did not update. Stopping loop.")
+        break
+      }
+      
+      current_model <- svyglm(new_formula, design = design, family = Gamma(link = "log"))
+      
+    } else {
+      print("----------------------------------------------------")
+      print("Selection Complete: All remaining p-values are < alpha.")
+      break
+    }
+  }
+  return(current_model)
+}
+
+final_clean_model <- backward_select_svy(final_gamma_model, subset(svy_design, HICOSTR1_A > 0))
+```
+
+```{r}
+summary(final_clean_model)
+```
+
+```{r}
+premium_gamma_model1 <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A +  GESDIB_A + HYPEV_A +  ASEV_A +  LONGCOVD2_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23 + EXCHANGE_A + PLNWRKR1_A,
+                          design = svy_design, 
+                          family = Gamma(link = "log"))
+
+summary(premium_gamma_model1)
+```
+
+```{r}
+gamma_diag <- data.frame(
+  Fitted = fitted(premium_gamma_model1),
+  Residuals = residuals(premium_gamma_model1, type = "deviance")
+)
+
+ggplot(gamma_diag, aes(x = log(Fitted), y = Residuals)) +
+  geom_point(alpha = 0.4) +
+  geom_smooth(method = "loess", color = "red") +
+  labs(title = "Gamma Model: Deviance Residuals vs Fitted",
+       subtitle = "Ideally, the red line is flat and residuals are centered around 0",
+       x = "Log(Fitted Values)",
+       y = "Deviance Residuals")
+```
+
+```{r}
+proxy_vif_model <- glm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A +  GESDIB_A + HYPEV_A +  ASEV_A +  LONGCOVD2_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23 + EXCHANGE_A + PLNWRKR1_A,
+    data = premium_data, 
+    weights = WTFA_A, 
+    family = Gamma(link = "log"))
+
+alias(proxy_vif_model)
+vif(proxy_vif_model)
+```
+
+```{r}
+final_gamma_model1 <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A +  GESDIB_A + HYPEV_A +  ASEV_A +  LONGCOVD2_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23 + EXCHANGE_A + PLNWRKR1_A,
+                          design = svy_design, 
+                          family = Gamma(link = "log"))
+
+summary(final_gamma_model1)
+```
 
