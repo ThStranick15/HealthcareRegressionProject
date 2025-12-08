@@ -12,7 +12,8 @@ library(survey)
 ```
 
 ```{r}
-adult2024 <- read.csv("adult24.csv", stringsAsFactors=FALSE)
+adult2024 <- read.csv("Data/adult24.csv", stringsAsFactors=FALSE)
+ncol(adult2024)
 ```
 
 ```{r}
@@ -326,6 +327,9 @@ premium_data <- premium_data %>%
 
 head(premium_data)
 ```
+```{r}
+nrow(premium_data)
+```
 
 ```{r}
 sort(colSums(is.na(premium_data)), decreasing = TRUE)
@@ -338,7 +342,7 @@ premium_data <- premium_data %>% select(HICOSTR1_A, #response y
                                         DIBEV_A, PREDIB_A, GESDIB_A, HYPEV_A, ASEV_A, LONGCOVD2_A, EVERCOVD_A, ANXFREQ_A,DEPFREQ_A, #health conditions
                                         SMOKELSEV1_A, SMKCIGST_A, DRKLIFE_A, DRK12MWK_A, DRKSTAT_A, MODFREQW_A, #health related behaviors
                                         REGION, URBRRL23, #geography
-                                        MCPART_A, MCCHOICE_A, EXCHANGE_A, PLNWRKR1_A, #access to care
+                                        #MCPART_A, MCCHOICE_A, EXCHANGE_A, PLNWRKR1_A, #access to care
                                         PPSU, PSTRAT, WTFA_A)#survey design
 sort(colSums(is.na(premium_data)), decreasing = TRUE)
 ```
@@ -349,9 +353,27 @@ premium_data %>%
   geom_histogram(bins = 50, fill = "skyblue", color = "black") +
   labs(title = "Distribution of Premiums")
 
-premium_data %>% 
-  ggplot(aes(x = log(HICOSTR1_A))) +
+nrow(premium_data)
+
+p <- ggplot(premium_data, aes(x = HICOSTR1_A)) +
   geom_histogram(bins = 50, fill = "skyblue", color = "black")
+
+# Extract histogram data
+hist_data <- ggplot_build(p)$data[[1]]
+
+# Find tallest bin
+top_bin <- hist_data %>%
+  slice_max(ncount, n = 1)   # or 'count' if you prefer raw counts
+
+# Add label to the tallest bin
+p + 
+  annotate("text",
+           x = top_bin$x,          # bin center
+           y = top_bin$count,      # height of bar
+           label = paste0("Peak: ", round(top_bin$x, 2)),
+           vjust = -0.5,
+           color = "black",
+           fontface = "bold")
 ```
 
 ```{r}

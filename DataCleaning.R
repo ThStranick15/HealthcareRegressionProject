@@ -30,44 +30,6 @@ premium_data <- premium_data %>% select(HICOSTR1_A, #response y
                                         MCPART_A, MCCHOICE_A, EXCHANGE_A, PLNWRKR1_A, #access to care
                                         PPSU, PSTRAT, WTFA_A)#survey design
 
-#easy interactions
-
-#GESDIB_A
-#on SEX_A=2
-
-premium_data$dummy <- with(premium_data,ifelse(SEX_A == 1, 0, 1))
-
-premium_data$test <- premium_data$dummy * premium_data$GESDIB_A
-
-#premium_data$GESDIB_A <- with(premium_data, ifelse(SEX_A == 1, 0, premium_data$GESDIB_A))
-
-#LONGCOVD2_A
-#on EVERCOVD_A=1
-
-#premium_data$LONGCOVD2_A <- with(premium_data, ifelse(EVERCOVD_A == 2, 0, premium_data$LONGCOVD2_A))
-
-#DRK12MWK_A
-#on DRKLIFE_A=1
-
-#premium_data$DRK12MWK_A <- with(premium_data, ifelse(DRKLIFE_A == 2, 0, premium_data$DRK12MWK_A))
-
-#hard interactions?
-
-#EMDOCCUPN2_A,EMDOCCUPN1_A,EMDINDSTN1_A
-#on EMPLASTWK_A=1 or EMPNOWRK_A=1 or EMPWHYNOT_A=7 or EMPWHENWRK_A=1
-
-#MCPART_A
-#on MEDICARE_A in (1,2)
-
-#MCCHOICE_A
-#on MEDICARE_A in (1,2) and MCPART_A in (2,3,7,8,9)
-
-#EXCHANGE_A
-#on PRIVATE_A = 1
-
-#PLNWRKR1_A
-#on PRIVATE_A in (1,2)
-
 #making invalid values NA (refused, not ascertained, don't know)
 premium_data$AGEP_A[premium_data$AGEP_A %in% c(97, 98, 99)] <- NA
 premium_data$SEX_A[premium_data$SEX_A %in% c(7,8,9)] <- NA
@@ -155,6 +117,28 @@ ggplot(premium_data, aes(x = AGEP_A)) +
     axis.title = element_text(size = 14),
     axis.text = element_text(size = 12)
   )
+
+nrow(premium_data)
+mean(premium_data$HICOSTR1_A)
+p <- ggplot(premium_data, aes(x = log(HICOSTR1_A))) +
+  geom_histogram(bins = 50, fill = "skyblue", color = "black")
+
+# Extract histogram data
+hist_data <- ggplot_build(p)$data[[1]]
+
+# Find tallest bin
+top_bin <- hist_data %>%
+  slice_max(ncount, n = 1)   # or 'count' if you prefer raw counts
+
+# Add label to the tallest bin
+p + 
+  annotate("text",
+           x = top_bin$x,          # bin center
+           y = top_bin$count,      # height of bar
+           label = paste0("Peak bin: ", round(exp(top_bin$x), 2)),
+           vjust = -0.5,
+           color = "red",
+           fontface = "bold")
 
 #Gender Table
 gender_table <- table(premium_data$SEX_A)
@@ -363,16 +347,50 @@ ggplot(resid_df, aes(sample = Residuals)) +
 #remove each category from model
 #Do one of health conditions affect health insurance premium?
 
-premium_model_nohealth <- svyglm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
-                                                    POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
-                                                    #DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
-                                                    SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
-                                                    REGION + URBRRL23 + #geography
-                                                    SEX_A + EVERCOVD_A + DRKLIFE_A,
-                                                    #SEX_A * GESDIB_A + LONGCOVD2_A * EVERCOVD_A + DRKLIFE_A * DRK12MWK_A, #interactions: EMDOCCUPN2_A,EMDOCCUPN1_A,EMDINDSTN1_A,MCPART_A,MCCHOICE_A,EXCHANGE_A,PLNWRKR1_A
-                                                    design = svy_design)
+premium_model_nodemo <- svyglm(HICOSTR1_A ~ #SEX_A + AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
+                                   POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
+                                   DIBEV_A + PREDIB_A + EVERCOVD_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
+                                   SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
+                                   REGION + URBRRL23, #geography
+                                 design = svy_design)
+
+anova(premium_model_nodemo, premium_model)
+
+premium_model_noecon<- svyglm(HICOSTR1_A ~ SEX_A + AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
+                                   #POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
+                                   DIBEV_A + PREDIB_A + EVERCOVD_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
+                                   SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
+                                   REGION + URBRRL23, #geography
+                                 design = svy_design)
+
+anova(premium_model_noecon, premium_model)
+
+premium_model_nohealth <- svyglm(HICOSTR1_A ~ SEX_A + AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
+                                   POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
+                                   #DIBEV_A + PREDIB_A + EVERCOVD_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
+                                   SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
+                                   REGION + URBRRL23, #geography
+                                 design = svy_design)
 
 anova(premium_model_nohealth, premium_model)
+
+premium_model_nobehav <- svyglm(HICOSTR1_A ~ SEX_A + AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
+                                   POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
+                                   DIBEV_A + PREDIB_A + EVERCOVD_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
+                                   #SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
+                                   REGION + URBRRL23, #geography
+                                 design = svy_design)
+
+anova(premium_model_nobehav, premium_model)
+
+premium_model_nogeo <- svyglm(HICOSTR1_A ~ SEX_A + AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
+                                  POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
+                                  DIBEV_A + PREDIB_A + EVERCOVD_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
+                                  SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A, #health related behaviors
+                                  #REGION + URBRRL23, #geography
+                                design = svy_design)
+
+anova(premium_model_nogeo, premium_model)
 
 #Residual Standard Error/R^2 vs Num of Predictors
 covariates <- c(
