@@ -12,12 +12,12 @@ survey_tibble <- tibble(survey_data)
 total_surveyed = nrow(survey_tibble)
 
 #Select only SAs with no dependents
-survey_singles <- survey_tibble %>% filter(PRPLCOV1_A == 2)
+survey_singles <- survey_tibble %>% filter(PRPLCOV1_A == 2) #%>% filter(MARITAL_A == 3)
 
 #Getting rows with premium data, do not want to include NA, or other non-values
 invalid_premium <- c(99999, 99998, 99997)
 
-premium_data <- survey_tibble %>% 
+premium_data <- survey_singles %>% 
   filter(!is.na( HICOSTR1_A ) & !HICOSTR1_A %in% invalid_premium) 
 
 #selecting all covariates
@@ -96,6 +96,28 @@ sample_table <- data.frame(
 
 sample_table
 
+##Premiums
+
+p <- ggplot(premium_data, aes(x = HICOSTR1_A)) +
+  geom_histogram(bins = 50, fill = "skyblue", color = "black")
+
+# Extract histogram data
+hist_data <- ggplot_build(p)$data[[1]]
+
+# Find tallest bin
+top_bin <- hist_data %>%
+  slice_max(ncount, n = 1)   # or 'count' if you prefer raw counts
+
+# Add label to the tallest bin
+p + 
+  annotate("text",
+           x = top_bin$x,          # bin center
+           y = top_bin$count,      # height of bar
+           label = paste0("Peak: ", round(top_bin$x, 2)),
+           vjust = -0.5,
+           color = "black",
+           fontface = "bold")
+
 #Demographics
 #Age Histogram
 ggplot(premium_data, aes(x = AGEP_A)) +
@@ -147,7 +169,7 @@ gender_table
 
 #Race Histogram
 
-freq_table <- table(survey_data$HISPALLP_A)
+freq_table <- table(premium_data$HISPALLP_A)
 
 df <- as.data.frame(freq_table)
 names(df) <- c("Code", "Frequency")
