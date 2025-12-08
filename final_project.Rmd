@@ -849,6 +849,7 @@ proxy_vif_model <- glm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A + NA
 alias(proxy_vif_model)
 vif(proxy_vif_model)
 ```
+
 ```{r}
 final_gamma_model <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
                                         POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
@@ -958,9 +959,53 @@ backward_select_svy <- function(full_model, design, alpha = 0.05) {
 
 final_clean_model <- backward_select_svy(final_gamma_model, subset(svy_design, HICOSTR1_A > 0))
 ```
-
 ```{r}
 summary(final_clean_model)
+```
+
+```{r}
+forward_select_svy <- function(full_model, alpha = 0.05) {
+  
+  covariates <- attr(terms(full_model), "term.labels")
+  selected_covariates <- c()
+  remaining_covariates <- covariates
+  form <- "HICOSTR1_A ~ 1"  # start with intercept only
+
+  repeat {
+    best_p <- Inf
+    best_cov <- NULL
+    
+    for (c in remaining_covariates) {
+      formula <- as.formula(paste(form, "+", c))
+      check_model <- svyglm(formula, design = svy_design)
+      
+      # p-value of the last added covariate (second row)
+      p_val <- coef(summary(check_model))[, "Pr(>|t|)"][length(coef(check_model))]
+      
+      if (p_val < best_p) {
+        best_p <- p_val
+        best_cov <- c
+      }
+    }
+    
+    # Stop if no covariate has p < alpha
+    if (is.null(best_cov) || best_p > alpha) {
+      break
+    }
+    
+    # Add the best covariate to the formula
+    print(paste("Adding: ",best_cov, "p-value", best_p))
+    form <- paste(form, "+", best_cov)
+    selected_covariates <- c(selected_covariates, best_cov)
+    remaining_covariates <- setdiff(remaining_covariates, best_cov)
+  }
+  
+  return(list(formula = as.formula(form), selected = selected_covariates))
+}
+
+# Usage
+forward_select_svy(final_gamma_model)
+
 ```
 
 ```{r}
@@ -1015,4 +1060,3 @@ final_gamma_model1 <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_
 
 summary(final_gamma_model1)
 ```
-
