@@ -1,6 +1,6 @@
 ---
 title: "Final Code"
-author: "Thomas Stranick"
+authors: "Thomas Stranick, Mohan Askani"
 date: "2025-12-12"
 output: pdf_document
 ---
@@ -607,7 +607,7 @@ ggplot(plot_data_gamma_clean, aes(x = fitted, y = residuals)) +
   )
 ```
 
-# At this point, model and data are ready for predictor selection and inferences
+## At this point, model and data are ready for predictor selection and inferences
 
 
 
