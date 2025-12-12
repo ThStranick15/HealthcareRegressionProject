@@ -1,6 +1,6 @@
 ---
 title: "Final Code"
-authors: "Thomas Stranick, Mohan Askani"
+authors: "Thomas Stranick, Mohan Askani, Avi Kodali"
 date: "2025-12-12"
 output: pdf_document
 ---
