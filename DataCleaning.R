@@ -256,12 +256,13 @@ svy_design <- svydesign(
 
 #MCPART_A + MCCHOICE_A + EXCHANGE_A + PLNWRKR1_A,
 
-premium_model <- svyglm(HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
-                          POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
+premium_model <- svyglm(HICOSTR1_A ~ AGEP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
+                          POVRATTC_A + EDUCP_A + ACCSSINT_A + #socio-economic
                           DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
                           SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
                           REGION + URBRRL23 + #geography
-                          SEX_A + EVERCOVD_A + DRKLIFE_A,
+                          SEX_A + EVERCOVD_A,
+                          family = Gamma(link = "log"),
                           #dummy * GESDIB_A, #+ LONGCOVD2_A * EVERCOVD_A + DRKLIFE_A * DRK12MWK_A, #interactions: EMDOCCUPN2_A,EMDOCCUPN1_A,EMDINDSTN1_A,MCPART_A,MCCHOICE_A,EXCHANGE_A,PLNWRKR1_A
                           design = svy_design)
 
@@ -396,11 +397,12 @@ premium_model_nohealth <- svyglm(HICOSTR1_A ~ SEX_A + AGEP_A + RACEALLP_A + HISP
 
 anova(premium_model_nohealth, premium_model)
 
-premium_model_nobehav <- svyglm(HICOSTR1_A ~ SEX_A + AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
-                                   POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + #socio-economic
+premium_model_nobehav <- svyglm(HICOSTR1_A ~ SEX_A + AGEP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + #demographic
+                                   POVRATTC_A + EDUCP_A + ACCSSINT_A + #socio-economic
                                    DIBEV_A + PREDIB_A + EVERCOVD_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
-                                   #SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A + #health related behaviors
+                                  + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +#SMOKELSEV1_A  #health related behaviors
                                    REGION + URBRRL23, #geography
+                                  family = Gamma(link = "log"),
                                  design = svy_design)
 
 anova(premium_model_nobehav, premium_model)
