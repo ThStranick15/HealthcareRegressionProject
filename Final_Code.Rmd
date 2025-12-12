@@ -239,6 +239,384 @@ health_conditions <- data.frame(
 health_conditions
 ```
 
+## OLS MODEL & DIAGNOSTICS
+```{r}
+# Initial linear regression model
+model_lm <- lm(
+  HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+    POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + 
+    DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A +
+    SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
+    REGION + URBRRL23 +
+    SEX_A + EVERCOVD_A,
+  data = premium_data
+)
+# Residuals vs Fitted (OLS)
+resid_ols   <- resid(model_lm)
+fitted_ols  <- fitted(model_lm)
+
+plot_data_ols <- data.frame(
+  fitted    = fitted_ols,
+  residuals = resid_ols
+)
+
+# Creating residual vs fitted values plot
+ggplot(plot_data_ols, aes(x = fitted, y = residuals)) +
+  geom_point(
+    alpha = 0.6,           # Transparency for overplotting
+    size = 2,              # Slightly larger points
+    color = "#2E86AB",     # Attractive blue color
+    shape = 19             # Filled circles
+  ) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed",
+    color = "#E15554",     # Contrasting red color
+    linewidth = 0.8
+  ) +
+  # Add smoothing line to see patterns
+  geom_smooth(
+    method = "loess",
+    se = TRUE,             # Confidence band
+    color = "#3A2E39",     # Dark color for smooth line
+    fill = "#E1CE7A",      # Light yellow for confidence band
+    alpha = 0.2,
+    linewidth = 1
+  ) +
+  labs(
+    x = "Fitted Values",
+    y = "Residuals",
+    title = "Residuals vs. Fitted Values",
+    subtitle = "OLS Model Diagnostic Plot"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 16,
+      hjust = 0.5,
+      margin = margin(b = 10)
+    ),
+    plot.subtitle = element_text(
+      color = "gray40",
+      hjust = 0.5,
+      margin = margin(b = 15)
+    ),
+    axis.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.3),
+    panel.border = element_rect(fill = NA, color = "gray70", linewidth = 0.5),
+    # plot.background = element_rect(fill = "white", color = NA)
+  ) +
+  # Add informative caption
+  labs(caption = "Dashed red line at y=0 | Gray band shows LOESS smooth with 95% CI")
+
+# QQ plot of OLS residuals (ggplot version)
+data_for_qq_ols <- data.frame(residuals = resid_ols)
+
+# Creating QQ-norm plot
+ggplot(data_for_qq_ols, aes(sample = residuals)) +
+  # Adds the points (quantiles of the sample vs. theoretical normal)
+  stat_qq_point(
+    size = 2,           # Slightly larger points
+    color = "#1F78B4"   # A nice blue color
+  ) +
+  # Adds the confidence band (95% is standard)
+  stat_qq_band(
+    fill = "grey80",    # Light grey band
+    alpha = 0.5         # Semi-transparent
+  ) +
+  # Adds the diagonal reference line
+  stat_qq_line(
+    color = "red",
+    linetype = "dashed" # Use a dashed line for contrast
+  ) +
+  # Labels and Title
+  labs(
+    title = "Normal Q-Q Plot of OLS Residuals",
+    # subtitle = "Assessing the Normality Assumption",
+    x = "Theoretical Quantiles (Normal Distribution)",
+    y = "Sample Quantiles (Residuals)"
+  ) +
+  # Use a clean theme
+  theme_classic() +
+  # Further theme adjustments for a professional look
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```
+
+## SURVEY DESIGN & GAMMA GLM (LOG LINK)
+```{r}
+library(survey)
+
+svy_design <- svydesign(
+  id      = ~PPSU,
+  strata  = ~PSTRAT,
+  weights = ~WTFA_A,
+  data    = premium_data,
+  nest    = TRUE
+)
+
+# Survey-weighted Gamma GLM (full initial model)
+model_gamma_full <- svyglm(
+  HICOSTR1_A ~ AGEP_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A +
+    POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A + 
+    DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A +
+    SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A +
+    REGION + URBRRL23 +
+    SEX_A + EVERCOVD_A,
+  family = Gamma(link = "log"),
+  design = svy_design
+)
+
+# Deviance residuals vs Fitted (Gamma GLM)
+resid_gamma_full  <- residuals(model_gamma_full, type = "deviance")
+fitted_gamma_full <- fitted(model_gamma_full)
+
+plot_data_gamma <- data.frame(
+  fitted    = fitted_gamma_full,
+  residuals = resid_gamma_full
+)
+
+# Creating residual vs fitted values plot for Gamma model
+ggplot(plot_data_gamma, aes(x = fitted, y = residuals)) +
+  geom_point(
+    alpha = 0.6,           # Transparency for overplotting
+    size = 2,              # Slightly larger points
+    color = "#2E86AB",     # Attractive blue color
+    shape = 19             # Filled circles
+  ) +
+  geom_hline(
+    yintercept = 0,
+    linetype = "dashed",
+    color = "#E15554",     # Contrasting red color
+    linewidth = 0.8
+  ) +
+  # Add smoothing line to see patterns
+  geom_smooth(
+    method = "loess",
+    se = TRUE,             # Confidence band
+    color = "#3A2E39",     # Dark color for smooth line
+    fill = "#E1CE7A",      # Light yellow for confidence band
+    alpha = 0.2,
+    linewidth = 1
+  ) +
+  labs(
+    x = "Fitted Values",
+    y = "Deviance Residuals",
+    title = "Deviance Residuals vs. Fitted Values",
+    subtitle = "GLM (Gamma - Log link) Model Diagnostic Plot"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(
+      face = "bold",
+      size = 16,
+      hjust = 0.5,
+      margin = margin(b = 10)
+    ),
+    plot.subtitle = element_text(
+      color = "gray40",
+      hjust = 0.5,
+      margin = margin(b = 15)
+    ),
+    axis.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.3),
+    panel.border = element_rect(fill = NA, color = "gray70", linewidth = 0.5),
+    # plot.background = element_rect(fill = "white", color = NA)
+  ) +
+  # Add informative caption
+  labs(caption = "Dashed red line at y=0 | Gray band shows LOESS smooth with 95% CI")
+
+# QQ plot of deviance residuals (Gamma GLM)
+data_for_qq_gamma <- data.frame(residuals = resid_gamma_full)
+
+ggplot(data_for_qq_gamma, aes(sample = residuals)) +
+  # Adds the points (quantiles of the sample vs. theoretical normal)
+  stat_qq_point(
+    size = 2,           # Slightly larger points
+    color = "#1F78B4"   # A nice blue color
+  ) +
+  # Adds the confidence band (95% is standard)
+  stat_qq_band(
+    fill = "grey80",    # Light grey band
+    alpha = 0.5         # Semi-transparent
+  ) +
+  # Adds the diagonal reference line
+  stat_qq_line(
+    color = "red",
+    linetype = "dashed" # Use a dashed line for contrast
+  ) +
+  # Labels and Title
+  labs(
+    title = "Normal Q-Q Plot of GLM (Gamma - Log) Residuals",
+    # subtitle = "Assessing the Normality Assumption",
+    x = "Theoretical Quantiles (Normal Distribution)",
+    y = "Sample Quantiles (Residuals)"
+  ) +
+  # Use a clean theme
+  theme_classic() +
+  # Further theme adjustments for a professional look
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+# Dispersion parameter (before removing influential points)
+disp_full <- summary(model_gamma_full)$dispersion
+cat("Dispersion (full model):", round(disp_full, 4), "\n")
+```
+
+## GAM SMOOTHS TO CHECK LINEARITY ON LINK SCALE
+```{r}
+library(mgcv)
+library(gratia)
+
+gam_diag <- gam(
+  HICOSTR1_A ~ 
+    s(AGEP_A) +
+    s(POVRATTC_A) +
+    HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A +
+    RATCAT_A + EDUCP_A + ACCSSINT_A +
+    DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A +
+    SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
+    REGION + URBRRL23 +
+    SEX_A + EVERCOVD_A,
+  family = Gamma(link = "log"),
+  data   = premium_data,
+  weights = WTFA_A
+)
+
+draw(gam_diag) + labs(title = "GAM Smooths for Continuous Predictors (Gamma–log)")
+```
+
+## MULTICOLLINEARITY CHECKS
+```{r}
+# Categorical–categorical associations using Cramér’s V
+library(DescTools)
+library(reshape2)
+
+cat_vars <- names(premium_data)[sapply(premium_data, is.factor)]
+
+cramer_mat <- matrix(NA_real_, nrow = length(cat_vars), ncol = length(cat_vars),
+                     dimnames = list(cat_vars, cat_vars))
+
+for (i in seq_along(cat_vars)) {
+  for (j in seq_along(cat_vars)) {
+    tab <- table(premium_data[[cat_vars[i]]], premium_data[[cat_vars[j]]])
+    cramer_mat[i, j] <- CramerV(tab, bias.correct = TRUE)
+  }
+}
+melted <- melt(cramer_mat, na.rm = TRUE)
+
+ggplot(melted, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  scale_fill_gradient(low = "#ffffff", high = "#264653", na.value = "white") +
+  coord_equal() +
+  labs(x = "", y = "", fill = "Cramér's V",
+       title = "Association between categorical predictors") +
+  theme_minimal(base_size = 12) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## INFLUENTIAL POINTS (COOK'S DISTANCE) & RE-FIT
+```{r}
+# Cook's distance from survey-weighted Gamma GLM
+cooks_d <- cooks.distance(model_gamma_full)
+
+plot(cooks_d, type = "h",
+     main = "Cook’s Distance (Gamma GLM, survey-weighted)",
+     ylab = "Cook’s Distance")
+abline(h = 4 / length(cooks_d), col = "blue", lwd = 2, lty = 2)
+
+top_idx <- order(cooks_d, decreasing = TRUE)[1:10]
+
+# Influential points in the raw data
+mf <- model.frame(model_gamma_full)
+
+# Add Cook's distance and keep only those rows
+inf_tbl <- cbind(
+  mf[top_idx, ],
+  cooks_distance = cooks_d[top_idx]
+)
+# saving top 10 influential points with raw data
+write.csv(inf_tbl, "top_10_influential.csv")
+
+# Remove top influential points
+premium_data_clean <- premium_data[-top_idx, ]
+
+# creating new survey design object
+svy_design_clean <- svydesign(
+  id      = ~PPSU,
+  strata  = ~PSTRAT,
+  weights = ~WTFA_A,
+  data    = premium_data_clean,
+  nest    = TRUE
+)
+
+# Refit Gamma GLM on cleaned data (also after dropping 3 collinear vars)
+model_gamma_clean <- svyglm(
+  HICOSTR1_A ~ AGEP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A +
+    POVRATTC_A + EDUCP_A + ACCSSINT_A +
+    DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A +
+    SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
+    REGION + URBRRL23 +
+    SEX_A + EVERCOVD_A,
+  family = Gamma(link = "log"),
+  design = svy_design_clean
+)
+
+disp_clean <- summary(model_gamma_clean)$dispersion
+cat("Dispersion (after removing influential points):", round(disp_clean, 4), "\n")
+
+# Residuals vs Fitted (cleaned Gamma GLM)
+resid_gamma_clean  <- residuals(model_gamma_clean, type = "deviance")
+fitted_gamma_clean <- fitted(model_gamma_clean)
+
+plot_data_gamma_clean <- data.frame(
+  fitted    = fitted_gamma_clean,
+  residuals = resid_gamma_clean
+)
+
+# final residual vs fitted values post addressing assumption deviations
+ggplot(plot_data_gamma_clean, aes(x = fitted, y = residuals)) +
+  geom_point(alpha = 0.6, size = 2, color = "#2E86AB", shape = 19) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "#E15554", linewidth = 0.8) +
+  geom_smooth(
+    method = "loess", se = TRUE,
+    color = "#3A2E39", fill = "#E1CE7A", alpha = 0.2, linewidth = 1
+  ) +
+  labs(
+    x = "Fitted Values",
+    y = "Deviance Residuals",
+    title = "Deviance Residuals vs Fitted Values",
+    subtitle = "Gamma GLM (log link) After Removing Influential Points",
+    caption = "Dashed red line at y = 0 | Yellow band: LOESS smooth with 95% CI"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title    = element_text(face = "bold", size = 16, hjust = 0.5, margin = margin(b = 10)),
+    plot.subtitle = element_text(color = "gray40", hjust = 0.5, margin = margin(b = 15)),
+    axis.title    = element_text(face = "bold"),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray90", linewidth = 0.3),
+    panel.border     = element_rect(fill = NA, color = "gray70", linewidth = 0.5)
+  )
+```
+
+# At this point, model and data are ready for predictor selection and inferences
+
+
+
+
+
+
+
+
+
 
 
 
