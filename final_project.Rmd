@@ -139,26 +139,6 @@ premium_data <- premium_data %>%
                              EDUCP_A == 9 ~ "Masters",
                              EDUCP_A == 10 ~ "Profess/Doc",
                              .default = NA),
-         EMPLASTWK_A = case_when(EMPLASTWK_A == 1 ~ "Yes",
-                                 EMPLASTWK_A == 2 ~ "No",
-                                 .default = NA),
-         EMPNOWRK_A = case_when(EMPNOWRK_A == 1 ~ "Yes",
-                                EMPNOWRK_A == 2 ~ "No",
-                                .default = NA),
-         EMPWHYNOT_A = case_when(EMPWHYNOT_A == 1 ~ "Unemployed",
-                                 EMPWHYNOT_A == 2 ~ "Contract work",
-                                 EMPWHYNOT_A == 3 ~ "Retired",
-                                 EMPWHYNOT_A == 4 ~ "Unable for health reasons",
-                                 EMPWHYNOT_A == 5 ~ "Taking care of house/family",
-                                 EMPWHYNOT_A == 6 ~ "School",
-                                 EMPWHYNOT_A == 7 ~ "Working at family business for no pay",
-                                 EMPWHYNOT_A == 8 ~ "Other",
-                                 .default = NA),
-         EMPWHENWRK_A = case_when(EMPWHENWRK_A == 1 ~ "Within last 12 months",
-                                  EMPWHENWRK_A == 2 ~ "1-5 years ago",
-                                  EMPWHENWRK_A == 3 ~ "Over 5 years ago",
-                                  EMPWHENWRK_A == 4 ~ "Never worked",
-                                  .default = NA),
          ACCSSINT_A = case_when(ACCSSINT_A == 1 ~ "Yes",
                                 ACCSSINT_A == 2 ~ "No",
                                 .default = NA),
@@ -168,18 +148,12 @@ premium_data <- premium_data %>%
          PREDIB_A = case_when(PREDIB_A == 1 ~ "Yes",
                               PREDIB_A == 2 ~ "No",
                               .default = NA),
-         GESDIB_A = case_when(GESDIB_A == 1 ~ "Yes",
-                              GESDIB_A == 2 ~ "No",
-                              .default = NA),
          HYPEV_A = case_when(HYPEV_A == 1 ~ "Yes",
                              HYPEV_A == 2 ~ "No",
                              .default = NA),
          ASEV_A = case_when(ASEV_A == 1 ~ "Yes",
                             ASEV_A == 2 ~ "No",
                             .default = NA),
-         LONGCOVD2_A = case_when(LONGCOVD2_A == 1 ~ "Yes",
-                                 LONGCOVD2_A == 2 ~ "No",
-                                 .default = NA),
          EVERCOVD_A = case_when(EVERCOVD_A == 1 ~ "Yes",
                                 EVERCOVD_A == 2 ~ "No",
                                 .default = NA),
@@ -268,61 +242,7 @@ premium_data <- premium_data %>%
                               URBRRL23 == 2 ~ "Large fringe metro",
                               URBRRL23 == 3 ~ "Medium and small metro",
                               URBRRL23 == 4 ~ "Nonmetropolitan",
-                              .default = NA),
-         MEDICARE_A = case_when(MEDICARE_A == 1 ~ "Yes, info",
-                                MEDICARE_A == 2 ~ "Yes no info",
-                                MEDICARE_A == 3 ~ "No",
-                                .default = NA),
-         MCPART_A = case_when(MCPART_A == 1 ~ "Part A - hospital only",
-                              MCPART_A == 2 ~ "Part B - medical only",
-                              MCPART_A == 3 ~ "Part A & B",
-                              .default = NA),
-         MCCHOICE_A = case_when(MCCHOICE_A == 1 ~ "Yes",
-                                MCCHOICE_A == 2 ~ "No",
-                                .default = NA),
-         PRIVATE_A = case_when(PRIVATE_A == 1 ~ "Yes, info",
-                               PRIVATE_A == 2 ~ "Yes no info",
-                               PRIVATE_A == 3 ~ "No",
-                                .default = NA),
-         EXCHANGE_A = case_when(EXCHANGE_A == 1 ~ "Exchange plan",
-                                EXCHANGE_A == 2 ~ "No exchange plan"),
-         PLNWRKR1_A = case_when(PLNWRKR1_A == 1 ~ "Employer/union/professional organization",
-                                PLNWRKR1_A == 2 ~ "Directly",
-                                PLNWRKR1_A == 3 ~ "Obamacare",
-                                PLNWRKR1_A == 4 ~ "State/Local/Community program",
-                                PLNWRKR1_A == 5 ~ "Other",
-                                PLNWRKR1_A == 6 ~ "School",
-                                PLNWRKR1_A == 7 ~ "Parents",
-                                PLNWRKR1_A == 8 ~ "Relative",
-                                .default = NA))
-
-premium_data <- premium_data %>%
-  mutate(
-    GESDIB_A = if_else(SEX_A == "M", "No", GESDIB_A),
-    LONGCOVD2_A = if_else(EVERCOVD_A == "No", "No", LONGCOVD2_A),
-    DRK12MWK_A = if_else(DRKLIFE_A == "No", "Did not drink in past year", DRK12MWK_A),
-    MCPART_A = if_else(MEDICARE_A == "No", "Not Enrolled", as.character(MCPART_A)),
-    MCCHOICE_A = if_else(MEDICARE_A == "No", "Not Enrolled", as.character(MCCHOICE_A)),
-    EXCHANGE_A = if_else(PRIVATE_A == "No", "Not Applicable", as.character(EXCHANGE_A)),
-    PLNWRKR1_A = if_else(PRIVATE_A == "No", "Not Applicable", as.character(PLNWRKR1_A)),
-    EMDOCCUPN2_A = if_else(
-      (EMPLASTWK_A == "Yes" | EMPNOWRK_A == "Yes" | EMPWHYNOT_A == "Working at family business for no pay" | EMPWHENWRK_A == "Within last 12 months"),
-      as.character(EMDOCCUPN2_A), 
-      "99"
-    ),
-    
-    EMDOCCUPN1_A = if_else(
-      (EMPLASTWK_A == "Yes" | EMPNOWRK_A == "Yes" | EMPWHYNOT_A == "Working at family business for no pay" | EMPWHENWRK_A == "Within last 12 months"),
-      as.character(EMDOCCUPN1_A), 
-      "99"
-    ),
-    
-    EMDINDSTN1_A = if_else(
-      (EMPLASTWK_A == "Yes" | EMPNOWRK_A == "Yes" | EMPWHYNOT_A == "Working at family business for no pay" | EMPWHENWRK_A == "Within last 12 months"),
-      as.character(EMDINDSTN1_A), 
-      "99"
-    ),
-  )
+                              .default = NA))
 
 head(premium_data)
 ```
@@ -849,7 +769,6 @@ proxy_vif_model <- glm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A + NA
 alias(proxy_vif_model)
 vif(proxy_vif_model)
 ```
-
 ```{r}
 final_gamma_model <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
                                         POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
@@ -860,6 +779,11 @@ final_gamma_model <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A
                           family = Gamma(link = "log"))
 summary(final_gamma_model)
 ```
+
+```{r}
+nobs(final_gamma_model)
+```
+
 
 ```{r}
 cooks_d <- cooks.distance(final_gamma_model)
@@ -896,167 +820,287 @@ ggplot(data.frame(Fitted = fitted(final_gamma_model),
 ```
 
 ```{r}
-backward_select_svy <- function(full_model, design, alpha = 0.05) {
-  current_model <- full_model
-  
-  print(paste("Starting Backward Selection with", length(coef(current_model)), "coefficients..."))
-  
-  while(TRUE) {
-    summ <- summary(current_model)
-    coefs <- summ$coefficients
-    
-    if(nrow(coefs) <= 1) {
-      print("No predictors left.")
-      break
-    }
-    
+library(survey)
 
-    p_values <- coefs[rownames(coefs) != "(Intercept)", "Pr(>|t|)", drop = FALSE]
-    max_p <- max(p_values)
-    worst_coef_name <- rownames(p_values)[which.max(p_values)]
-    
-    if(max_p > alpha) {
-      
-
-      model_terms <- attr(terms(current_model), "term.labels")
-      
-
-      matched_term <- NULL
-      for(term in model_terms) {
-        if(substr(worst_coef_name, 1, nchar(term)) == term) {
-          if(is.null(matched_term) || nchar(term) > nchar(matched_term)) {
-            matched_term <- term
-          }
-        }
-      }
-      
-      if(is.null(matched_term)) {
-        print(paste("ERROR: Could not map coefficient", worst_coef_name, "to a term. Stopping."))
-        break
-      }
-      
-      print(paste("Dropping term:", matched_term, 
-                  "| Triggered by coefficient:", worst_coef_name, 
-                  "| p-value:", round(max_p, 4)))
-      
-      new_formula <- update(formula(current_model), paste("~ . -", matched_term))
-      
-      if(identical(new_formula, formula(current_model))) {
-        print("Error: Formula did not update. Stopping loop.")
-        break
-      }
-      
-      current_model <- svyglm(new_formula, design = design, family = Gamma(link = "log"))
-      
-    } else {
-      print("----------------------------------------------------")
-      print("Selection Complete: All remaining p-values are < alpha.")
-      break
-    }
-  }
-  return(current_model)
-}
-
-final_clean_model <- backward_select_svy(final_gamma_model, subset(svy_design, HICOSTR1_A > 0))
-```
-```{r}
-summary(final_clean_model)
-```
-
-```{r}
-forward_select_svy <- function(full_model, alpha = 0.05) {
+forward_select_svy_wald <- function(full_model, design_obj, alpha = 0.05) {
   
   covariates <- attr(terms(full_model), "term.labels")
+  model_family <- full_model$family
+  
   selected_covariates <- c()
   remaining_covariates <- covariates
-  form <- "HICOSTR1_A ~ 1"  # start with intercept only
+  
+  current_form_str <- "HICOSTR1_A ~ 1" 
+  
+  print("Starting Forward Selection (Wald Tests)...")
 
   repeat {
     best_p <- Inf
     best_cov <- NULL
     
-    for (c in remaining_covariates) {
-      formula <- as.formula(paste(form, "+", c))
-      check_model <- svyglm(formula, design = svy_design)
+    for (candidate in remaining_covariates) {
       
-      # p-value of the last added covariate (second row)
-      p_val <- coef(summary(check_model))[, "Pr(>|t|)"][length(coef(check_model))]
+      new_form_str <- paste(current_form_str, "+", candidate)
       
-      if (p_val < best_p) {
-        best_p <- p_val
-        best_cov <- c
-      }
+      tryCatch({
+        check_model <- svyglm(as.formula(new_form_str), 
+                              design = design_obj, 
+                              family = model_family)
+        
+        wald_test <- regTermTest(check_model, candidate, method = "Wald")
+        p_val <- wald_test$p[1]
+        
+        if (p_val < best_p) {
+          best_p <- p_val
+          best_cov <- candidate
+        }
+        
+      }, error = function(e) {
+      })
     }
     
-    # Stop if no covariate has p < alpha
     if (is.null(best_cov) || best_p > alpha) {
+      print("------------------------------------------------")
+      print("Selection Complete. No further variables significant.")
       break
     }
     
-    # Add the best covariate to the formula
-    print(paste("Adding: ",best_cov, "p-value", best_p))
-    form <- paste(form, "+", best_cov)
+    print(paste("Adding:", best_cov, "| Wald P-value:", format.pval(best_p, digits=4)))
+    
+    current_form_str <- paste(current_form_str, "+", best_cov)
     selected_covariates <- c(selected_covariates, best_cov)
     remaining_covariates <- setdiff(remaining_covariates, best_cov)
   }
   
-  return(list(formula = as.formula(form), selected = selected_covariates))
+  final_model <- svyglm(as.formula(current_form_str), design = design_obj, family = model_family)
+  return(final_model)
 }
 
-# Usage
-forward_select_svy(final_gamma_model)
 
+final_forward_model <- forward_select_svy_wald(final_gamma_model, svy_design)
+
+summary(final_forward_model)
 ```
 
 ```{r}
-premium_gamma_model1 <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
-                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
-                                        DIBEV_A +  PREDIB_A +  GESDIB_A + HYPEV_A +  ASEV_A +  LONGCOVD2_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
-                                        SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
-                                        REGION + URBRRL23 + EXCHANGE_A + PLNWRKR1_A,
-                          design = svy_design, 
-                          family = Gamma(link = "log"))
+ggplot(data.frame(Fitted = fitted(final_forward_model), 
+                  Resid = residuals(final_forward_model, type = "deviance")),
+       aes(x = log(Fitted), y = Resid)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "loess", color = "red", se = FALSE) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Residuals vs. Fitted Values",
+       subtitle = "Red line should be flat. Funnel shape means Gamma assumption failed.",
+       x = "Log Predicted Premium",
+       y = "Deviance Residuals")
+```
 
-summary(premium_gamma_model1)
+
+```{r}
+backward_select_svy <- function(full_model, design_obj, alpha = 0.05) {
+  
+  current_model <- full_model
+  print(paste("Starting Backward Selection (Wald Tests) with", length(attr(terms(current_model), "term.labels")), "variables..."))
+  
+  while(TRUE) {
+    current_terms <- attr(terms(current_model), "term.labels")
+    
+    if(length(current_terms) == 0) {
+      print("No predictors left.")
+      break
+    }
+    
+    p_values <- sapply(current_terms, function(term) {
+      tryCatch({
+        test <- regTermTest(current_model, term, method = "Wald")
+        return(test$p[1])
+      }, error = function(e) {
+        return(0)
+      })
+    })
+    
+    max_p <- max(p_values)
+    worst_var <- names(p_values)[which.max(p_values)]
+    
+    if(max_p > alpha) {
+      print(paste("Dropping term:", worst_var, 
+                  "| Wald p-value:", round(max_p, 4)))
+      
+      new_formula <- update(formula(current_model), paste("~ . -", worst_var))
+      
+      current_model <- svyglm(new_formula, design = design_obj, family = Gamma(link = "log"))
+      
+    } else {
+      print("----------------------------------------------------")
+      print("Selection Complete: All remaining variables are significant.")
+      break
+    }
+  }
+  
+  return(current_model)
+}
+
+final_backward_model <- backward_select_svy(final_gamma_model, svy_design)
+summary(final_backward_model)
 ```
 
 ```{r}
-gamma_diag <- data.frame(
-  Fitted = fitted(premium_gamma_model1),
-  Residuals = residuals(premium_gamma_model1, type = "deviance")
-)
-
-ggplot(gamma_diag, aes(x = log(Fitted), y = Residuals)) +
-  geom_point(alpha = 0.4) +
-  geom_smooth(method = "loess", color = "red") +
-  labs(title = "Gamma Model: Deviance Residuals vs Fitted",
-       subtitle = "Ideally, the red line is flat and residuals are centered around 0",
-       x = "Log(Fitted Values)",
+ggplot(data.frame(Fitted = fitted(final_back_model), 
+                  Resid = residuals(final_back_model, type = "deviance")),
+       aes(x = log(Fitted), y = Resid)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "loess", color = "red", se = FALSE) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Residuals vs. Fitted Values",
+       subtitle = "Red line should be flat. Funnel shape means Gamma assumption failed.",
+       x = "Log Predicted Premium",
        y = "Deviance Residuals")
 ```
 
 ```{r}
-proxy_vif_model <- glm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
-                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
-                                        DIBEV_A +  PREDIB_A +  GESDIB_A + HYPEV_A +  ASEV_A +  LONGCOVD2_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
-                                        SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
-                                        REGION + URBRRL23 + EXCHANGE_A + PLNWRKR1_A,
-    data = premium_data, 
-    weights = WTFA_A, 
-    family = Gamma(link = "log"))
+hybrid_select_svy <- function(empty_model, full_scope_model, design_obj, 
+                                     alpha_enter = 0.05, alpha_remove = 0.05) {
+  
+  model_family <- empty_model$family
+  scope_vars <- attr(terms(full_scope_model), "term.labels")
+  
+  current_model <- empty_model
+  current_form_str <- paste(deparse(formula(current_model), width.cutoff = 500), collapse = " ")
+  
+  print(paste("Starting Hybrid Selection (Enter <", alpha_enter, "| Remove >", alpha_remove, ")..."))
+  
+  iter <- 0
+  max_iter <- 50 
+  
+  repeat {
+    iter <- iter + 1
+    if(iter > max_iter) { 
+      print("WARNING: Max iterations reached. Stopping to prevent infinite loop.")
+      break 
+    }
+    
+    print(paste("--- Iteration", iter, "---"))
+    
+    current_vars <- attr(terms(current_model), "term.labels")
+    possible_adds <- setdiff(scope_vars, current_vars)
+    
+    action_taken <- FALSE
+    
+    best_p_add <- Inf
+    best_var_add <- NULL
+    
+    if(length(possible_adds) > 0) {
+      for(cand in possible_adds) {
+        new_form_str <- paste(current_form_str, "+", cand)
+        
+        tryCatch({
+          temp_mod <- svyglm(as.formula(new_form_str), design = design_obj, family = model_family)
+          wt <- regTermTest(temp_mod, cand, method = "Wald")
+          p_val <- wt$p[1]
+          
+          if(p_val < best_p_add) {
+            best_p_add <- p_val
+            best_var_add <- cand
+          }
+        }, error = function(e) {})
+      }
+    }
+    
+    if(!is.null(best_var_add) && best_p_add < alpha_enter) {
+      print(paste("++ ADDING:", best_var_add, "| P-value:", format.pval(best_p_add, digits=4)))
+      
+      current_form_str <- paste(current_form_str, "+", best_var_add)
+      current_model <- svyglm(as.formula(current_form_str), design = design_obj, family = model_family)
+      action_taken <- TRUE
+    }
+    
+    current_vars_check <- attr(terms(current_model), "term.labels")
+    
+    if(length(current_vars_check) > 0) {
+      worst_p_drop <- -1
+      worst_var_drop <- NULL
+      
+      for(existing in current_vars_check) {
+        if(!is.null(best_var_add) && existing == best_var_add) next
+        
+        tryCatch({
+          wt <- regTermTest(current_model, existing, method = "Wald")
+          p_val <- wt$p[1]
+          
+          if(p_val > worst_p_drop) {
+            worst_p_drop <- p_val
+            worst_var_drop <- existing
+          }
+        }, error = function(e) {})
+      }
+      
+      if(!is.null(worst_var_drop) && worst_p_drop > alpha_remove) {
+        print(paste("-- DROPPING:", worst_var_drop, "| P-value:", format.pval(worst_p_drop, digits=4)))
+        
+        current_form_str <- paste(deparse(update(formula(current_model), paste("~ . -", worst_var_drop)), width.cutoff = 500), collapse = " ")
+        current_model <- svyglm(as.formula(current_form_str), design = design_obj, family = model_family)
+        action_taken <- TRUE
+      }
+    }
+    
+    if(!action_taken) {
+      print("------------------------------------------------")
+      print("Selection Complete. Model is stable.")
+      break
+    }
+  }
+  
+  return(current_model)
+}
 
-alias(proxy_vif_model)
-vif(proxy_vif_model)
+null_model <- svyglm(HICOSTR1_A ~ 1, 
+                      design = design_final, 
+                      family = Gamma(link = "log"))
+
+full_model <- final_gamma_model 
+
+final_hybrid_model <- hybrid_select_svy(null_model, full_model, svy_design, alpha_remove = 0.1)
+
+summary(final_hybrid_model)
 ```
 
 ```{r}
-final_gamma_model1 <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
-                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
-                                        DIBEV_A +  PREDIB_A +  GESDIB_A + HYPEV_A +  ASEV_A +  LONGCOVD2_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
-                                        SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
-                                        REGION + URBRRL23 + EXCHANGE_A + PLNWRKR1_A,
-                          design = svy_design, 
-                          family = Gamma(link = "log"))
-
-summary(final_gamma_model1)
+ggplot(data.frame(Fitted = fitted(final_back_model), 
+                  Resid = residuals(final_back_model, type = "deviance")),
+       aes(x = log(Fitted), y = Resid)) +
+  geom_point(alpha = 0.3) +
+  geom_smooth(method = "loess", color = "red", se = FALSE) +
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  labs(title = "Residuals vs. Fitted Values",
+       subtitle = "Red line should be flat. Funnel shape means Gamma assumption failed.",
+       x = "Log Predicted Premium",
+       y = "Deviance Residuals")
 ```
+
+```{r}
+get_model_metrics <- function(model, name) {
+  r2 <- 1 - (model$deviance / null_model$deviance)
+  
+  num_vars <- length(attr(terms(model), "term.labels"))
+
+  return(data.frame(
+    Model = name,
+    Num_Variables = num_vars,
+    Pseudo_R2 = round(r2, 4),
+    Deviance = round(model$deviance, 2)
+  ))
+}
+
+comparison_table <- rbind(
+  get_model_metrics(final_backward_model, "Backward (Wald)"),
+  get_model_metrics(final_forward_model, "Forward (Wald)"),
+  get_model_metrics(final_hybrid_model, "Hybrid (Wald)")
+)
+
+comparison_table
+```
+
+```{r}
+summary(final_backward_model)
+```
+
