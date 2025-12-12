@@ -10,6 +10,10 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(ggplot2)
 library(stringr)
+library(lawstat)
+library(car)
+library(broom)
+library(qqplotr)
 ```
 
 ## Data Pre-Processing
@@ -83,6 +87,213 @@ premium_data <- premium_data %>%
                   REGION, URBRRL23),as.factor))
 ```
 
+Convert numerical codes to strings for easier interpretation, and make sure factor levels are set correctly
+
+```{r}
+premium_data <- premium_data %>% 
+  mutate(
+    SEX_A = case_when(
+      SEX_A == 1 ~ "M", 
+      SEX_A == 2 ~ "F",
+      .default = NA),
+    RACEALLP_A = case_when(
+      RACEALLP_A == 1 ~ "White",
+      RACEALLP_A == 2 ~ "African-American",
+      RACEALLP_A == 3 ~ "Asian",
+      RACEALLP_A == 4 ~ "AIAN",
+      RACEALLP_A == 5 ~ "AIAN+Grp",
+      RACEALLP_A == 6 ~ "Other S/M",
+      .default = NA),
+    HISPALLP_A = case_when(
+      HISPALLP_A == 1 ~ "Hispanic",
+      HISPALLP_A == 2 ~ "NH-White",
+      HISPALLP_A == 3 ~ "NH-African-American",
+      HISPALLP_A == 4 ~ "NH-Asian",
+      HISPALLP_A == 5 ~ "NH_AIAN",
+      HISPALLP_A == 6 ~ "NH-AIAN+Grp",
+      HISPALLP_A == 7 ~ "Other S/M",
+      .default = NA),
+    MARITAL_A = case_when(
+      MARITAL_A == 1 ~ "Married",
+      MARITAL_A == 2 ~ "Living Together",
+      MARITAL_A == 3 ~ "Neither",
+      .default = NA),
+    NATUSBORN_A = case_when(
+      NATUSBORN_A == 1 ~ "Yes",
+      NATUSBORN_A == 2 ~ "No",
+      .default = NA),
+    ORIENT_A = case_when(
+      ORIENT_A == 1 ~ "GayLesbian",
+      ORIENT_A == 2 ~ "Straight",
+      ORIENT_A == 3 ~ "Bisexual",
+      ORIENT_A == 4 ~ "Something else",
+      ORIENT_A == 5 ~ "Don't Know",
+      .default = NA),
+    EDUCP_A = case_when(
+      EDUCP_A == 0 ~ "Never/KG",
+      EDUCP_A == 1 ~ "Gr1-11",
+      EDUCP_A == 2 ~ "Gr12,No Diploma",
+      EDUCP_A == 3 ~ "GED",
+      EDUCP_A == 4 ~ "HS Grad",
+      EDUCP_A == 5 ~ "Some College",
+      EDUCP_A == 6 ~ "Assoc Dg: OCC, TECH, VOC",
+      EDUCP_A == 7 ~ "Assoc Dg: Acad",
+      EDUCP_A == 8 ~ "Bachelors",
+      EDUCP_A == 9 ~ "Masters",
+      EDUCP_A == 10 ~ "Profess/Doc",
+      .default = NA),
+    ACCSSINT_A = case_when(
+      ACCSSINT_A == 1 ~ "Yes",
+      ACCSSINT_A == 2 ~ "No",
+      .default = NA),
+    DIBEV_A = case_when(
+      DIBEV_A == 1 ~ "Yes",
+      DIBEV_A == 2 ~ "No",
+      .default = NA),
+    PREDIB_A = case_when(
+      PREDIB_A == 1 ~ "Yes",
+      PREDIB_A == 2 ~ "No",
+      .default = NA),
+    HYPEV_A = case_when(
+      HYPEV_A == 1 ~ "Yes",
+      HYPEV_A == 2 ~ "No",
+      .default = NA),
+    ASEV_A = case_when(
+      ASEV_A == 1 ~ "Yes",
+      ASEV_A == 2 ~ "No",
+      .default = NA),
+    EVERCOVD_A = case_when(
+      EVERCOVD_A == 1 ~ "Yes",
+      EVERCOVD_A == 2 ~ "No",
+      .default = NA),
+    ANXFREQ_A = case_when(
+      ANXFREQ_A == 1 ~ "Daily",
+      ANXFREQ_A == 2 ~ "Weekly",
+      ANXFREQ_A == 3 ~ "Monthly",
+      ANXFREQ_A == 4 ~ "Few times/year",
+      ANXFREQ_A == 5 ~ "Never",
+      .default = NA),
+    DEPFREQ_A = case_when(
+      DEPFREQ_A == 1 ~ "Daily",
+      DEPFREQ_A == 2 ~ "Weekly",
+      DEPFREQ_A == 3 ~ "Monthly",
+      DEPFREQ_A == 4 ~ "Few times/year",
+      DEPFREQ_A == 5 ~ "Never",
+      .default = NA),
+    SMOKELSEV1_A = case_when(
+      SMOKELSEV1_A == 1 ~ "Yes",
+      SMOKELSEV1_A == 2 ~ "No",
+      .default = NA),
+    SMKCIGST_A = case_when(
+      SMKCIGST_A == 1 ~ "Current everyday",
+      SMKCIGST_A == 2 ~ "Current some day",
+      SMKCIGST_A == 3 ~ "Former",
+      SMKCIGST_A == 4 ~ "Never",
+      SMKCIGST_A == 5 ~ "Smoker, status unknown",
+      .default = NA),
+    DRKLIFE_A = case_when(
+      DRKLIFE_A == 1 ~ "Yes",
+      DRKLIFE_A == 2 ~ "No",
+      .default = NA),
+    DRKSTAT_A = case_when(
+      DRKSTAT_A == 1 ~ "Lifetime abstainer",
+      DRKSTAT_A == 2 ~ "Former infrequent",
+      DRKSTAT_A == 3 ~ "Former inregular",
+      DRKSTAT_A == 4 ~ "Former, freq unknown",
+      DRKSTAT_A == 5 ~ "Current infrequent",
+      DRKSTAT_A == 6 ~ "Current light",
+      DRKSTAT_A == 7 ~ "Current moderate",
+      DRKSTAT_A == 8 ~ "Current heavier",
+      DRKSTAT_A == 9 ~ "Current, freq unknown",
+      .default = NA),
+    MODFREQW_A = as.numeric(as.character(MODFREQW_A)),
+    MODFREQW_A = case_when(
+      MODFREQW_A == 0 ~ "< 1 time/week",
+      MODFREQW_A == 1 ~ "1 time/week",
+      MODFREQW_A == 2 ~ "2 time/week",
+      MODFREQW_A == 3 ~ "3 time/week",
+      MODFREQW_A == 4 ~ "4 time/week",
+      MODFREQW_A == 5 ~ "5 time/week",
+      MODFREQW_A == 6 ~ "6 time/week",
+      MODFREQW_A == 7 ~ "7 time/week",
+      MODFREQW_A == 8 ~ "8 time/week",
+      MODFREQW_A == 9 ~ "9 time/week",
+      MODFREQW_A == 10 ~ "10 time/week",
+      MODFREQW_A == 11 ~ "11 time/week",
+      MODFREQW_A == 12 ~ "12 time/week",
+      MODFREQW_A == 13 ~ "13 time/week",
+      MODFREQW_A == 14 ~ "14 time/week",
+      MODFREQW_A == 15 ~ "15 time/week",
+      MODFREQW_A == 16 ~ "16 time/week",
+      MODFREQW_A == 17 ~ "17 time/week",
+      MODFREQW_A == 18 ~ "18 time/week",
+      MODFREQW_A == 19 ~ "19 time/week",
+      MODFREQW_A == 20 ~ "20 time/week",
+      MODFREQW_A == 21 ~ "21 time/week",
+      MODFREQW_A == 22 ~ "22 time/week",
+      MODFREQW_A == 23 ~ "23 time/week",
+      MODFREQW_A == 24 ~ "24 time/week",
+      MODFREQW_A == 25 ~ "25 time/week",
+      MODFREQW_A == 26 ~ "26 time/week",
+      MODFREQW_A == 27 ~ "27 time/week",
+      MODFREQW_A == 28 ~ "28 time/week",
+      MODFREQW_A == 94 ~ "Never",
+      MODFREQW_A == 96 ~ "Unable",
+      .default = NA),
+    REGION = case_when(
+      REGION == 1 ~ "Northeast",
+      REGION == 2 ~ "Midwest",
+      REGION == 3 ~ "South",
+      REGION == 4 ~ "West",
+      .default = NA),
+    URBRRL23 = case_when(
+      URBRRL23 == 1 ~ "Large central metro",
+      URBRRL23 == 2 ~ "Large fringe metro",
+      URBRRL23 == 3 ~ "Medium and small metro",
+      URBRRL23 == 4 ~ "Nonmetropolitan",
+      .default = NA)
+  ) %>%
+  mutate(
+    SEX_A = fct_relevel(as.factor(SEX_A), "M"),
+    RACEALLP_A = fct_relevel(as.factor(RACEALLP_A), "White"),
+    HISPALLP_A = fct_relevel(as.factor(HISPALLP_A), "NH-White"),
+    MARITAL_A = fct_relevel(as.factor(MARITAL_A), "Neither"),
+    NATUSBORN_A = fct_relevel(as.factor(NATUSBORN_A), "Yes"),
+    ORIENT_A = fct_relevel(as.factor(ORIENT_A), "Straight"),
+    REGION = fct_relevel(as.factor(REGION), "Northeast"),
+    URBRRL23 = fct_relevel(as.factor(URBRRL23), "Nonmetropolitan"),
+    ACCSSINT_A = fct_relevel(as.factor(ACCSSINT_A), "No"),
+    DIBEV_A = fct_relevel(as.factor(DIBEV_A), "No"),
+    PREDIB_A = fct_relevel(as.factor(PREDIB_A), "No"),
+    HYPEV_A = fct_relevel(as.factor(HYPEV_A), "No"),
+    ASEV_A = fct_relevel(as.factor(ASEV_A), "No"),
+    EVERCOVD_A = fct_relevel(as.factor(EVERCOVD_A), "No"),
+    DRKLIFE_A = fct_relevel(as.factor(DRKLIFE_A), "No"),
+    SMOKELSEV1_A = fct_relevel(as.factor(SMOKELSEV1_A), "No"),
+    ANXFREQ_A = factor(ANXFREQ_A, levels = c("Never", "Few times/year", "Monthly", "Weekly", "Daily")),
+    DEPFREQ_A = factor(DEPFREQ_A, levels = c("Never", "Few times/year", "Monthly", "Weekly", "Daily")),
+    SMKCIGST_A = factor(SMKCIGST_A, levels = c("Never", "Former", "Current some day", "Current everyday", "Smoker, status unknown")),
+    DRKSTAT_A = factor(DRKSTAT_A, levels = c("Lifetime abstainer", "Former infrequent", "Former inregular", "Former, freq unknown", 
+                                             "Current infrequent", "Current light", "Current moderate", "Current heavier", 
+                                             "Current, freq unknown")),
+    EDUCP_A = fct_relevel(
+      factor(EDUCP_A, levels = c(
+        "Never/KG", "Gr1-11", "Gr12,No Diploma", "GED", "HS Grad", 
+        "Some College", "Assoc Dg: OCC, TECH, VOC", "Assoc Dg: Acad", 
+        "Bachelors", "Masters", "Profess/Doc"
+      )),
+      "HS Grad"
+    ),
+    MODFREQW_A = factor(MODFREQW_A, levels = c(
+      "Never", "< 1 time/week", "1 time/week", "2 time/week", "3 time/week", "4 time/week", 
+      "5 time/week", "6 time/week", "7 time/week", "8 time/week", "9 time/week", "10 time/week", 
+      "11 time/week", "12 time/week", "13 time/week", "14 time/week", "15 time/week", 
+      "16 time/week", "17 time/week", "18 time/week", "19 time/week", "20 time/week", 
+      "21 time/week", "22 time/week", "23 time/week", "24 time/week", "25 time/week", 
+      "26 time/week", "27 time/week", "28 time/week", "Unable"
+    ))
+  )
+```
 
 ## Numerical and Graphical Summary of Data
 
@@ -93,6 +304,13 @@ summary(premium_data)
 num_total <- nrow(survey_data)
 
 num_sample_adults <- nrow(premium_data) #number of SA with premium value
+
+premium_model <- lm(HICOSTR1_A ~ AGEP_A + SEX_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A + HYPEV_A +  ASEV_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23,
+                          data = premium_data)
 
 num_obs <- nobs(premium_model) #number of observations in model
 
@@ -167,13 +385,13 @@ df <- as.data.frame(freq_table)
 names(df) <- c("Code", "Frequency")
 
 labels <- c(
-  "1" = "Hispanic",
-  "2" = "Non-Hispanic White only",
-  "3" = "Non-Hispanic Black/African American only",
-  "4" = "Non-Hispanic Asian only",
-  "5" = "Non-Hispanic AIAN only",
-  "6" = "Non-Hispanic AIAN and any other group",
-  "7" = "Other single and multiple races")
+  "Hispanic" = "Hispanic",
+  "NH-White" = "Non-Hispanic White only",
+  "NH-African-American" = "Non-Hispanic Black/African American only",
+  "NH-Asian" = "Non-Hispanic Asian only",
+  "NH_AIAN" = "Non-Hispanic AIAN only",
+  "NH-AIAN+Grp" = "Non-Hispanic AIAN and any other group",
+  "Other S/M" = "Other single and multiple races")
 
 df$Description <- str_wrap(labels[as.character(df$Code)], width = 20)
 
@@ -218,17 +436,17 @@ ggplot(premium_data, aes(x = POVRATTC_A)) +
 ```{r}
 #DIBEV_A + PREDIB_A + HYPEV_A + ASEV_A + ANXFREQ_A + DEPFREQ_A + #health conditions
 
-dibev_yes <- sum(premium_data$DIBEV_A == 1, na.rm = TRUE)
-dibev_no  <- sum(premium_data$DIBEV_A == 2, na.rm = TRUE)
+dibev_yes <- sum(premium_data$DIBEV_A == "Yes", na.rm = TRUE)
+dibev_no  <- sum(premium_data$DIBEV_A == "No", na.rm = TRUE)
 
-predib_yes <- sum(premium_data$PREDIB_A == 1, na.rm = TRUE)
-predib_no  <- sum(premium_data$PREDIB_A == 2, na.rm = TRUE)
+predib_yes <- sum(premium_data$PREDIB_A == "Yes", na.rm = TRUE)
+predib_no  <- sum(premium_data$PREDIB_A == "No", na.rm = TRUE)
 
-hypev_yes <- sum(premium_data$HYPEV_A == 1, na.rm = TRUE)
-hypev_no  <- sum(premium_data$HYPEV_A == 2, na.rm = TRUE)
+hypev_yes <- sum(premium_data$HYPEV_A == "Yes", na.rm = TRUE)
+hypev_no  <- sum(premium_data$HYPEV_A == "No", na.rm = TRUE)
 
-asev_yes <- sum(premium_data$ASEV_A == 1, na.rm = TRUE)
-asev_no  <- sum(premium_data$ASEV_A == 2, na.rm = TRUE)
+asev_yes <- sum(premium_data$ASEV_A == "Yes", na.rm = TRUE)
+asev_no  <- sum(premium_data$ASEV_A == "No", na.rm = TRUE)
 
 health_conditions <- data.frame(
   Condition = c("Diabetes", "Prediabetes", "Hypertension", "Asthma"),
@@ -346,6 +564,41 @@ ggplot(data_for_qq_ols, aes(sample = residuals)) +
     plot.subtitle = element_text(hjust = 0.5)
   )
 ```
+
+```{r}
+#performing log transformation and comparing QQ plots
+model_log <- lm(log(HICOSTR1_A) ~ AGEP_A + SEX_A + RACEALLP_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + RATCAT_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A + HYPEV_A +  ASEV_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKLIFE_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23,
+                          data = premium_data)
+
+residuals_comparison <- bind_rows(
+  data.frame(
+    Residuals = as.numeric(scale(residuals(model_lm))),
+    Model_Type = "Base Linear Model"
+  ),
+  data.frame(
+    Residuals = as.numeric(scale(residuals(model_log))),
+    Model_Type = "Log-Transformed Model"
+  )
+)
+
+residuals_comparison %>% ggplot(aes(sample = Residuals)) +
+  stat_qq(aes(color = Model_Type), alpha = 0.6) +
+  stat_qq_line(color = "black", linetype = "dashed") +
+  facet_wrap(~Model_Type, scales = "free") +
+  theme_minimal() +
+  scale_color_manual(values = c("Base Linear Model" = "red", "Log-Transformed Model" = "blue")) +
+  labs(
+    title = "Diagnostic Check: Normality of Residuals",
+    x = "Theoretical Quantiles",
+    y = "Sample Quantiles"
+  ) +
+  theme(legend.position = "none")
+```
+
 
 ## SURVEY DESIGN & GAMMA GLM (LOG LINK)
 ```{r}
@@ -534,6 +787,10 @@ abline(h = 4 / length(cooks_d), col = "blue", lwd = 2, lty = 2)
 
 top_idx <- order(cooks_d, decreasing = TRUE)[1:10]
 
+cutoff <- 4 / length(cooks_d)
+
+top_idx_final <- which(cooks_d > cutoff)
+
 # Influential points in the raw data
 mf <- model.frame(model_gamma_full)
 
@@ -546,7 +803,8 @@ inf_tbl <- cbind(
 write.csv(inf_tbl, "top_10_influential.csv")
 
 # Remove top influential points
-premium_data_clean <- premium_data[-top_idx, ]
+
+premium_data_clean <- premium_data[-top_idx_final, ]
 
 # creating new survey design object
 svy_design_clean <- svydesign(
@@ -609,13 +867,370 @@ ggplot(plot_data_gamma_clean, aes(x = fitted, y = residuals)) +
 
 ## At this point, model and data are ready for predictor selection and inferences
 
+```{r}
+final_gamma_model <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A + HYPEV_A +  ASEV_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23,
+                          design = svy_design, 
+                          family = Gamma(link = "log"))
+n_obs <- nobs(final_gamma_model)
+cutoff <- 4 / n_obs
+
+cooks <- cooks.distance(final_gamma_model)
+
+influential_indices <- which(cooks > cutoff)
+
+print(paste("Threshold (4/n):", round(cutoff, 5)))
+print(paste("Number of points removed:", length(influential_indices)))
 
 
+clean_premium_data <- premium_data[-influential_indices, ]
 
 
+svy_design <- svydesign(
+  id = ~PPSU,           
+  strata = ~PSTRAT,    
+  weights = ~WTFA_A,    
+  data = clean_premium_data,
+  nest = TRUE
+)
+
+final_gamma_model <- svyglm(HICOSTR1_A ~ AGEP_A + SEX_A + HISPALLP_A + MARITAL_A + NATUSBORN_A + ORIENT_A + 
+                                        POVRATTC_A + EDUCP_A + ACCSSINT_A +  
+                                        DIBEV_A +  PREDIB_A + HYPEV_A +  ASEV_A +  EVERCOVD_A + ANXFREQ_A + DEPFREQ_A +
+                                        SMOKELSEV1_A + SMKCIGST_A + DRKSTAT_A + MODFREQW_A +
+                                        REGION + URBRRL23,
+                          design = svy_design, 
+                          family = Gamma(link = "log"))
+```
 
 
+# Making the forward search with Walds Test
+```{r}
+forward_select_svy <- function(full_model, design_obj, alpha = 0.05) {
+  
+  #Get list of covariates in the model
+  covariates <- attr(terms(full_model), "term.labels")
+  #Get model family (gamma, gaussian, loglink, etc.)
+  model_family <- full_model$family
+  
+  #Empty vector to store selected covariates
+  selected_covariates <- c()
+  #Covariates remaining to be tested 
+  remaining_covariates <- covariates
+  
+  #Start with null model
+  current_form_str <- "HICOSTR1_A ~ 1" 
+  
+  print("Starting Forward Selection (Wald Tests)...")
 
+  repeat {
+    #Store best p-value
+    best_p <- Inf
+    #Store best corresponding covariate
+    best_cov <- NULL
+    
+    #Loop through remaining covariates
+    for (candidate in remaining_covariates) {
+      #Temporary formula with added new covariate
+      new_form_str <- paste(current_form_str, "+", candidate)
+      
+      tryCatch({
+        check_model <- svyglm(as.formula(new_form_str), 
+                              design = design_obj, 
+                              family = model_family)
+        # Get the p-value
+        wald_test <- regTermTest(check_model, candidate, method = "Wald")
+        p_val <- wald_test$p[1]
+        
+        #Compare to see if it is the best p-value
+        if (p_val < best_p) {
+          best_p <- p_val
+          best_cov <- candidate
+        }
+        
+      }, error = function(e) {
+      })
+    }
+    
+    #If model crashed or best variable is above threshold, stop
+    if (is.null(best_cov) || best_p > alpha) {
+      print("------------------------------------------------")
+      print("Selection Complete. No further variables significant.")
+      break
+    }
+    
+    print(paste("Adding:", best_cov, "| Wald P-value:", format.pval(best_p, digits=4)))
+    #Add best covariate to the model, remove it from remaining covariates, repeat the loop.
+    current_form_str <- paste(current_form_str, "+", best_cov)
+    selected_covariates <- c(selected_covariates, best_cov)
+    remaining_covariates <- setdiff(remaining_covariates, best_cov)
+  }
+  
+  #Fit the final model with selected variables
+  final_model <- svyglm(as.formula(current_form_str), design = design_obj, family = model_family)
+  return(final_model)
+}
+
+
+final_forward_model <- forward_select_svy(final_gamma_model, svy_design, alpha = 0.1)
+```
+
+```{r}
+backward_select_svy <- function(full_model, design_obj, alpha = 0.05) {
+  
+  #Make a copy of the full model
+  current_model <- full_model
+  print(paste("Starting Backward Selection (Wald Tests) with", length(attr(terms(current_model), "term.labels")), "variables..."))
+  
+  while(TRUE) {
+    # Get all the terms in the current model
+    current_terms <- attr(terms(current_model), "term.labels")
+    
+    if(length(current_terms) == 0) {
+      print("No predictors left.")
+      break
+    }
+    
+    #Gather the p_values for each term in the model when running Wald's test
+    p_values <- sapply(current_terms, function(term) {
+      tryCatch({
+        test <- regTermTest(current_model, term, method = "Wald")
+        return(test$p[1])
+      }, error = function(e) {})
+    })
+    
+    #Find the maximum p-value and its corresponding variable
+    max_p <- max(p_values)
+    worst_var <- names(p_values)[which.max(p_values)]
+    
+    #If above the threshold, drop the variable, then update the current model to recognize this
+    if(max_p > alpha) {
+      print(paste("Dropping term:", worst_var, 
+                  "| Wald p-value:", round(max_p, 4)))
+      
+      new_formula <- update(formula(current_model), paste("~ . -", worst_var))
+      
+      current_model <- svyglm(new_formula, design = design_obj, family = Gamma(link = "log"))
+      
+      #If not above threshold, stop loop
+    } else {
+      print("----------------------------------------------------")
+      print("Selection Complete: All remaining variables are significant.")
+      break
+    }
+  }
+  
+  return(current_model)
+}
+
+final_backward_model <- backward_select_svy(final_gamma_model, svy_design, alpha = 0.1)
+```
+
+```{r}
+hybrid_select_svy <- function(empty_model, full_scope_model, design_obj, 
+                                     alpha_enter = 0.05, alpha_remove = 0.05) {
+  
+  #Gets the model family and all the variables from the full model
+  model_family <- empty_model$family
+  scope_vars <- attr(terms(full_scope_model), "term.labels")
+  
+  #Takes a copy of the null model and its formula
+  current_model <- empty_model
+  current_form_str <- paste(deparse(formula(current_model), width.cutoff = 500), collapse = " ")
+  
+  print(paste("Starting Hybrid Selection (Enter <", alpha_enter, "| Remove >", alpha_remove, ")..."))
+  
+  #Iteration counter to break loop if it goes to infinite (can happen if alpha_enter and alpha_remove keep adding and removing the same variable)
+  iter <- 0
+  max_iter <- 50 
+  
+  repeat {
+    #Update iteration counter and check if its less than 50
+    iter <- iter + 1
+    if(iter > max_iter) { 
+      print("WARNING: Max iterations reached. Stopping to prevent infinite loop.")
+      break 
+    }
+    
+    print(paste("--- Iteration", iter, "---"))
+    #Get variables currently in model
+    current_vars <- attr(terms(current_model), "term.labels")
+    #Get variables not yet in model
+    possible_adds <- setdiff(scope_vars, current_vars)
+    
+    #Check if anything was done in this iteration
+    action_taken <- FALSE
+    
+    #Store best p-value and corresponding variable to add
+    best_p_add <- Inf
+    best_var_add <- NULL
+    
+    #Forward step
+    if(length(possible_adds) > 0) {
+      #Loop through all variables not yet in model
+      for(cand in possible_adds) {
+        #Make new formula for possible variable to add
+        new_form_str <- paste(current_form_str, "+", cand)
+        
+        tryCatch({
+          #Test to see if this significant
+          temp_mod <- svyglm(as.formula(new_form_str), design = design_obj, family = model_family)
+          wt <- regTermTest(temp_mod, cand, method = "Wald")
+          p_val <- wt$p[1]
+          
+          #If best p-value so far, store it
+          if(p_val < best_p_add) {
+            best_p_add <- p_val
+            best_var_add <- cand
+          }
+        }, error = function(e) {})
+      }
+    }
+    
+    #Check if best p-value is below threshold. If it is, add to the current model
+    if(!is.null(best_var_add) && best_p_add < alpha_enter) {
+      print(paste("++ ADDING:", best_var_add, "| P-value:", format.pval(best_p_add, digits=4)))
+      
+      current_form_str <- paste(current_form_str, "+", best_var_add)
+      current_model <- svyglm(as.formula(current_form_str), design = design_obj, family = model_family)
+      action_taken <- TRUE
+    }
+    
+    #Refresh list of variables in case something was added
+    current_vars_check <- attr(terms(current_model), "term.labels")
+    
+    #Backward step
+    if(length(current_vars_check) > 0) {
+      #Store worst p-value and corresponding variable
+      worst_p_drop <- -1
+      worst_var_drop <- NULL
+      #Loop through current variables
+      for(existing in current_vars_check) {
+        if(!is.null(best_var_add) && existing == best_var_add) next
+        
+        tryCatch({
+          #Get p-values for each variable currently in model
+          wt <- regTermTest(current_model, existing, method = "Wald")
+          p_val <- wt$p[1]
+          
+          #Store the worst one
+          if(p_val > worst_p_drop) {
+            worst_p_drop <- p_val
+            worst_var_drop <- existing
+          }
+        }, error = function(e) {})
+      }
+      
+      #If above threshold, drop this variables and update model as such.
+      if(!is.null(worst_var_drop) && worst_p_drop > alpha_remove) {
+        print(paste("-- DROPPING:", worst_var_drop, "| P-value:", format.pval(worst_p_drop, digits=4)))
+        
+        current_form_str <- paste(deparse(update(formula(current_model), paste("~ . -", worst_var_drop)), width.cutoff = 500), collapse = " ")
+        current_model <- svyglm(as.formula(current_form_str), design = design_obj, family = model_family)
+        action_taken <- TRUE
+      }
+    }
+    
+    # If no action was taken in forward or backward steps, stop loop
+    if(!action_taken) {
+      print("------------------------------------------------")
+      print("Selection Complete. Model is stable.")
+      break
+    }
+  }
+  
+  return(current_model)
+}
+
+null_model <- svyglm(HICOSTR1_A ~ 1, 
+                      design = svy_design_clean, 
+                      family = Gamma(link = "log"))
+
+full_model <- final_gamma_model
+
+final_hybrid_model <- hybrid_select_svy(null_model, full_model, svy_design, alpha_enter = 0.1, alpha_remove = 0.1)
+```
+
+```{r}
+#Get model metrics for each model
+get_model_metrics <- function(model, name) {
+  #Pseudo r^2 based on deviance
+  r2 <- 1 - (model$deviance / null_model$deviance)
+  
+  num_vars <- length(attr(terms(model), "term.labels"))
+
+  return(data.frame(
+    Model = name,
+    Num_Variables = num_vars,
+    Pseudo_R2 = round(r2, 4),
+    Deviance = round(model$deviance, 2)
+  ))
+}
+
+comparison_table <- rbind(
+  get_model_metrics(model_gamma_clean, "Full Model"),
+  get_model_metrics(final_backward_model, "Backward (Wald)"),
+  get_model_metrics(final_forward_model, "Forward (Wald)"),
+  get_model_metrics(final_hybrid_model, "Hybrid (Wald)")
+)
+
+comparison_table
+```
+
+```{r}
+#Model diagnostics all look good
+res.D = residuals(final_backward_model, type = "deviance")
+plot(final_backward_model$fitted.values, res.D, pch = 16, cex = 0.6, ylab = "Deviance Residuals",
+    xlab = "Fitted Probabilities", main = "Deviance Residuals vs. Fitted")
+lines(smooth.spline(final_backward_model$fitted.values, res.D, spar = 0.9),
+    col = "red", lwd = 2)
+abline(h = 0, lty = 2, col = "grey")
+runs.test(y = res.D, plot.it = TRUE)
+
+title(main = "Deviance Residual Runs Test")
+```
+
+```{r}
+#LRT test to see if backward model is sufficient
+anova(final_backward_model, final_gamma_model)
+```
+
+```{r}
+summary(final_backward_model)
+```
+
+```{r}
+#Tidy the model results
+results <- tidy(final_backward_model, conf.int = TRUE)
+
+#Filter for significant terms only (to keep the plot clean)
+sig_results <- results %>%
+  filter(term != "(Intercept)") %>%
+  filter(p.value < 0.05) %>%
+  mutate(
+    #Convert Log-Odds to % Change for easier interpretation
+    Percent_Change = (exp(estimate) - 1) * 100,
+    Low_CI = (exp(conf.low) - 1) * 100,
+    High_CI = (exp(conf.high) - 1) * 100
+  )
+
+sig_results %>% 
+  ggplot(aes(x = reorder(term, Percent_Change), y = Percent_Change)) +
+  geom_point(size = 3, color = "darkblue") +
+  geom_errorbar(aes(ymin = Low_CI, ymax = High_CI), width = 0.2, color = "darkblue") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
+  coord_flip() +
+  labs(
+    title = "What Drives Health Premiums?",
+    subtitle = "Estimated % Impact on Cost (Gamma GLM)",
+    x = "Predictor",
+    y = "Percent Change in Premium"
+  ) +
+  theme_bw()
+```
 
 
 
