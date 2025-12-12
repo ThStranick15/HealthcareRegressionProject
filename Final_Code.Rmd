@@ -728,6 +728,8 @@ cat("Dispersion (full model):", round(disp_full, 4), "\n")
 library(mgcv)
 library(gratia)
 
+mf <- model.frame(model_gamma_full) 
+
 gam_diag <- gam(
   HICOSTR1_A ~ 
     s(AGEP_A) +
@@ -739,11 +741,10 @@ gam_diag <- gam(
     REGION + URBRRL23 +
     SEX_A + EVERCOVD_A,
   family = Gamma(link = "log"),
-  data   = premium_data,
-  weights = WTFA_A
+  data   = mf
 )
+plot(gam_model, pages = 1)
 
-draw(gam_diag) + labs(title = "GAM Smooths for Continuous Predictors (Gamma–log)")
 ```
 
 ## MULTICOLLINEARITY CHECKS
@@ -1231,6 +1232,7 @@ sig_results %>%
   ) +
   theme_bw()
 ```
+
 
 
 
